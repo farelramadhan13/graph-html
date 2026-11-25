@@ -99,6 +99,19 @@
         contain: layout style paint;
       }
     }
+    .route-metrics-wrap {
+      container-type: inline-size;
+    }
+    .route-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.625rem;
+    }
+    @container (min-width: 460px) {
+      .route-metrics-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
 
     /* Print / PDF Styles */
     @media print {
@@ -1981,21 +1994,16 @@
                     <span>🗺️</span>
                     <span>Peta Rute (Kota Semarang)</span>
                   </button>
-                  <button type="button" onclick="updateSimulationParams({ viewMode: 'graph' })"
-                          class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition ${appState.viewMode === 'graph' ? 'btn-primary-gradient text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
-                    <span>🔗</span>
-                    <span>Graf (Abstraksi)</span>
-                  </button>
                 </div>
 
                 <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs">
                   <button type="button" onclick="updateSimulationParams({ viewMode: 'map' })"
                           class="px-2.5 py-1 rounded-lg font-semibold transition ${appState.viewMode === 'map' ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
-                    🗺️ Peta Nyata
+                    🗺️ Peta 
                   </button>
                   <button type="button" onclick="updateSimulationParams({ viewMode: 'graph' })"
                           class="px-2.5 py-1 rounded-lg font-semibold transition ${appState.viewMode === 'graph' ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
-                    🔗 Graf Saja
+                    🔗 Graf
                   </button>
                 </div>
               </div>
@@ -2090,13 +2098,13 @@
             <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
 
               <!-- Hasil Pencarian Rute (Col Span 6) -->
-              <section class="md:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between space-y-4">
+              <section class="md:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between space-y-4 min-w-0">
                 <div class="space-y-3">
-                  <div class="flex items-center justify-between">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
                     <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
                       <span class="text-brand-600">🚩</span> Hasil Pencarian Rute
                     </h3>
-                    <button type="button" onclick="setActiveTab('algoritma')" class="text-xs font-semibold text-brand-600 hover:text-brand-800 no-print">
+                    <button type="button" onclick="setActiveTab('algoritma')" class="text-xs font-semibold text-brand-600 hover:text-brand-800 shrink-0 no-print">
                       Detail Langkah →
                     </button>
                   </div>
@@ -2123,33 +2131,35 @@
                 </div>
 
                 <!-- 4 Key Route Metrics -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
-                    <span class="text-lg shrink-0">🛣️</span>
-                    <div class="min-w-0">
-                      <div class="text-[11px] text-slate-500">Jarak</div>
-                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${formatDecimal(displayedMetrics.distance)} km</div>
+                <div class="route-metrics-wrap pt-2 border-t border-slate-100">
+                  <div class="route-metrics-grid">
+                    <div class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 min-w-0">
+                      <span class="text-lg shrink-0">🛣️</span>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[11px] leading-tight text-slate-500 break-words">Jarak</div>
+                        <div class="text-xs sm:text-sm leading-tight font-extrabold text-slate-900 break-words">${formatDecimal(displayedMetrics.distance)} km</div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
-                    <span class="text-lg shrink-0">🕒</span>
-                    <div class="min-w-0">
-                      <div class="text-[11px] text-slate-500">Waktu</div>
-                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedMetrics.time} menit</div>
+                    <div class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 min-w-0">
+                      <span class="text-lg shrink-0">🕒</span>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[11px] leading-tight text-slate-500 break-words">Waktu</div>
+                        <div class="text-xs sm:text-sm leading-tight font-extrabold text-slate-900 break-words">${displayedMetrics.time} menit</div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
-                    <span class="text-lg shrink-0">🔗</span>
-                    <div class="min-w-0">
-                      <div class="text-[11px] text-slate-500">Jumlah Sisi</div>
-                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedEdgeCount}</div>
+                    <div class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 min-w-0">
+                      <span class="text-lg shrink-0">🔗</span>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[11px] leading-tight text-slate-500 break-words">Jumlah Sisi</div>
+                        <div class="text-xs sm:text-sm leading-tight font-extrabold text-slate-900 break-words">${displayedEdgeCount}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
-                    <span class="text-lg shrink-0">📍</span>
-                    <div class="min-w-0">
-                      <div class="text-[11px] text-slate-500">${appState.previewAltRoutePath ? 'Simpul Rute' : 'Node Dikunjungi'}</div>
-                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${appState.previewAltRoutePath ? displayedPath.length : activeResult.visitedCount}</div>
+                    <div class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 min-w-0">
+                      <span class="text-lg shrink-0">📍</span>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[11px] leading-tight text-slate-500 break-words">${appState.previewAltRoutePath ? 'Simpul Rute' : 'Node Dikunjungi'}</div>
+                        <div class="text-xs sm:text-sm leading-tight font-extrabold text-slate-900 break-words">${appState.previewAltRoutePath ? displayedPath.length : activeResult.visitedCount}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3285,7 +3295,7 @@
           wheelPxPerZoomLevel: 90
         });
         // 1 sumber peta tunggal (CARTO Voyager, tile 256px standar agar ringan & cepat)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_5fk7_1_7284e8c331cb2e9e221ec42d', {
           subdomains: 'abcd',
           maxZoom: 19,
           detectRetina: false,
