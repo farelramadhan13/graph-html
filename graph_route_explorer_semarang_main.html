@@ -113,33 +113,203 @@
       }
     }
 
-    /* Print / PDF Styles */
+    /* Print / PDF Styles & Pre-Print Snapshot Prep */
+    body.is-printing-prep .print-hide-panel {
+      display: none !important;
+    }
+    body.is-printing-prep .print-full-col {
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+    }
+    body.is-printing-prep .print-viz-grid {
+      display: grid !important;
+      grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+      gap: 0.5rem !important;
+    }
+    body.is-printing-prep .print-col-6 {
+      grid-column: span 6 / span 6 !important;
+    }
+    body.is-printing-prep .print-col-12 {
+      grid-column: span 12 / span 12 !important;
+    }
+    body.is-printing-prep .print-dashboard-root .print-viz-box {
+      height: 220px !important;
+    }
+    body.is-printing-prep .leaflet-control-zoom,
+    body.is-printing-prep .lf-btn-row,
+    body.is-printing-prep .print-dashboard-root .lf-legend {
+      display: none !important;
+    }
+
     @media print {
       @page {
         size: A4 landscape;
-        margin: 10mm;
+        margin: 8mm;
       }
-      body {
+      html, body {
         background: #ffffff !important;
         color: #0f172a !important;
+        width: 100% !important;
+        overflow: visible !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      .no-print {
+      .no-print,
+      .leaflet-control-zoom,
+      .lf-btn-row,
+      [data-pz-ui] {
         display: none !important;
       }
       .print-only {
         display: block !important;
+      }
+      .print-hide-panel {
+        display: none !important;
       }
       .main-content-wrapper {
         margin-left: 0 !important;
         padding: 0 !important;
         width: 100% !important;
       }
+      .dashboard-section-defer,
+      .viz-contain {
+        content-visibility: visible !important;
+        contain: none !important;
+        contain-intrinsic-size: auto !important;
+      }
       .card-shadow {
         box-shadow: none !important;
         border: 1px solid #cbd5e1 !important;
         break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      tr, .print-avoid-break {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .pz-layer {
+        transform: none !important;
+      }
+      [data-panzoom] > svg {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .lf-legend {
+        font-size: 9px !important;
+        line-height: 1.25 !important;
+        padding: 4px 6px !important;
+        max-width: 175px !important;
+      }
+      .lf-lbl {
+        font-size: 9px !important;
+        padding: 0 4px !important;
+      }
+      /* Deterministic Print Grids */
+      .print-grid-2 {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.6rem !important;
+      }
+      .print-grid-3 {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 0.6rem !important;
+      }
+      .print-grid-4 {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 0.5rem !important;
+      }
+      .print-grid-12,
+      .print-viz-grid {
+        display: grid !important;
+        grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+        gap: 0.6rem !important;
+      }
+      .print-col-5 { grid-column: span 5 / span 5 !important; }
+      .print-col-6 { grid-column: span 6 / span 6 !important; }
+      .print-col-7 { grid-column: span 7 / span 7 !important; }
+      .print-col-12,
+      .print-full-col { grid-column: 1 / -1 !important; }
+      .print-scroll-expand {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      .print-viz-box {
+        height: 270px !important;
+      }
+      /* Compact 1-Page Dashboard Print */
+      #print-report-header {
+        margin-bottom: 6px !important;
+        padding-bottom: 5px !important;
+      }
+      .print-dashboard-root {
+        gap: 6px !important;
+      }
+      .print-dashboard-root .print-full-col {
+        gap: 6px !important;
+      }
+      .print-dashboard-root .print-full-col > * + *,
+      .print-dashboard-root .space-y-5 > * + *,
+      .print-dashboard-root .space-y-3\.5 > * + *,
+      .print-dashboard-root .space-y-3 > * + * {
+        margin-top: 6px !important;
+      }
+      .print-dashboard-root section {
+        padding: 7px 10px !important;
+      }
+      .print-dashboard-root h3 {
+        font-size: 12px !important;
+      }
+      .print-dashboard-root .print-viz-box {
+        height: 220px !important;
+      }
+      .print-dashboard-root .lf-legend,
+      .print-dashboard-root .lf-lbl-dim {
+        display: none !important;
+      }
+      .print-dashboard-root .lf-lbl {
+        font-size: 8px !important;
+        padding: 0 3px !important;
+      }
+      .print-dashboard-root .print-extra-alt-row,
+      .print-dashboard-root .print-extra-step-row {
+        display: none !important;
+      }
+      .print-dashboard-root table {
+        font-size: 9.5px !important;
+        line-height: 1.25 !important;
+      }
+      .print-dashboard-root th,
+      .print-dashboard-root td {
+        padding: 2.5px 6px !important;
+      }
+      .print-dashboard-root .route-metrics-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 5px !important;
+      }
+      .print-dashboard-root .route-metrics-grid > div {
+        padding: 4px 6px !important;
+      }
+      /* Matrix & Benchmark Print Fitting (Tabs 2, 3, 4) */
+      .print-matrix-table {
+        font-size: 9px !important;
+      }
+      .print-matrix-table th,
+      .print-matrix-table td {
+        padding: 2px 3px !important;
+      }
+      .print-bench-table {
+        font-size: 9.5px !important;
+      }
+      .print-bench-table th,
+      .print-bench-table td {
+        padding: 4px 6px !important;
+      }
+      .print-code-pre {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        font-size: 10px !important;
       }
     }
   
@@ -156,6 +326,7 @@
     .lf-legend button { padding: 3px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; font-size: 10.5px; font-weight: 600; color: #1e293b; cursor: pointer; }
     .lf-legend button:hover { background: #e2e8f0; }
     .leaflet-container { background: #eef2f7; }
+    .leaflet-attribution-flag { display: none !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden">
@@ -174,7 +345,7 @@
       <div class="text-right text-xs text-slate-700 leading-relaxed">
         <div><span class="font-semibold">Mahasiswa:</span> <span id="print-student-name">Farel</span> (<span id="print-student-nim">4.33.24.0.12</span>)</div>
         <div><span class="font-semibold">Program Studi:</span> <span id="print-student-prodi">D4 Teknologi Rekayasa Komputer – Polines</span></div>
-        <div><span class="font-semibold">Parameter Aktif:</span> <span id="print-active-params">Polines → Lawang Sewu | Dijkstra | Jarak (km)</span></div>
+        <div><span class="font-semibold">Parameter Aktif:</span> <span id="print-active-params">Polines → Lawang Sewu | BFS | Jarak (km)</span></div>
         <div class="text-[11px] text-slate-500" id="print-timestamp"></div>
       </div>
     </div>
@@ -307,7 +478,7 @@
             </div>
             <div class="flex justify-between items-start gap-2">
               <span class="text-indigo-300 shrink-0">Algoritma:</span>
-              <span id="sidebar-sync-algo" class="font-semibold text-amber-300 text-right">Dijkstra</span>
+              <span id="sidebar-sync-algo" class="font-semibold text-amber-300 text-right">BFS</span>
             </div>
             <div class="flex justify-between items-start gap-2">
               <span class="text-indigo-300 shrink-0">Bobot:</span>
@@ -586,7 +757,7 @@
       activeTab: 'dashboard',
       startNode: 'A',
       goalNode: 'G',
-      selectedAlgo: 'dijkstra',
+      selectedAlgo: 'bfs',
       weightCriteria: 'distance', // 'distance' | 'time' | 'cost' | 'efficient'
       viewMode: 'split', // 'split' | 'map' | 'graph'
       algoDropdownOpen: false,
@@ -1419,7 +1590,10 @@
       }, 2800);
     }
 
-    function triggerPrintPDF(customSubtitle) {
+    let _printPrevBounds = null;
+    let _printPrepActive = false;
+
+    function syncPrintHeaderFields(customSubtitle) {
       const tabLabelMap = {
         dashboard: 'Tab 1: Dashboard Simulasi Rute & Perbandingan',
         eksplorasi: 'Tab 2: Eksplorasi Struktur Graf & Matriks Ketetanggaan',
@@ -1441,14 +1615,59 @@
       const altSuffix = appState.previewAltRoutePath ? ` | Pilihan: ${appState.previewAltRoutePath.join(' → ')}` : '';
       document.getElementById('print-active-params').textContent = `${startObj.shortName} (${startObj.id}) → ${goalObj.shortName} (${goalObj.id}) | ${algoMeta.code} | ${critInfo.label}${altSuffix}`;
       document.getElementById('print-timestamp').textContent = 'Dicetak pada: ' + new Date().toLocaleString('id-ID');
+    }
 
+    function enterPrintPrep() {
+      if (_printPrepActive) return;
+      _printPrepActive = true;
+      if (leaf.map && leaf.el && leaf.el.isConnected) {
+        try { _printPrevBounds = leaf.map.getBounds(); } catch (_) { _printPrevBounds = null; }
+      }
+      document.body.classList.add('is-printing-prep');
+      if (leaf.map && leaf.el && leaf.el.isConnected) {
+        leaf.map.invalidateSize({ pan: false });
+        leafFit([16, 16], false);
+      }
+    }
+
+    function exitPrintPrep() {
+      if (!_printPrepActive) return;
+      _printPrepActive = false;
+      document.body.classList.remove('is-printing-prep');
+      if (leaf.map && leaf.el && leaf.el.isConnected) {
+        requestAnimationFrame(() => {
+          if (!leaf.map || !leaf.el || !leaf.el.isConnected) return;
+          leaf.map.invalidateSize({ pan: false });
+          if (_printPrevBounds) {
+            leaf.map.fitBounds(_printPrevBounds, { animate: false });
+            _printPrevBounds = null;
+          } else {
+            leafFit();
+          }
+        });
+      }
+    }
+
+    function triggerPrintPDF(customSubtitle) {
+      syncPrintHeaderFields(customSubtitle);
+      enterPrintPrep();
       setTimeout(() => {
         window.print();
-      }, 80);
+        setTimeout(exitPrintPrep, 250);
+      }, 360);
     }
 
     // Synchronized Top Control Strip for Non-Dashboard Tabs
     function renderSyncedControlStrip(title, subtitle) {
+      const startObj = getNodeById(appState.startNode);
+      const goalObj = getNodeById(appState.goalNode);
+      const algoMeta = ALGORITHMS_META.find(a => a.id === appState.selectedAlgo);
+      const critInfo = getCriteriaInfo(appState.weightCriteria);
+      const activeRes = runAlgorithm(appState.selectedAlgo, appState.startNode, appState.goalNode, appState.weightCriteria);
+      const routeText = activeRes.found ? activeRes.path.join(' → ') : 'Tidak ada rute';
+      const metricText = activeRes.found
+        ? `${formatDecimal(activeRes.metrics.distance)} km • ${activeRes.metrics.time} mnt • ${formatCurrency(activeRes.metrics.cost)} (${activeRes.edgeCount} sisi)`
+        : '-';
       return `
         <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1460,6 +1679,32 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
               <span>Print PDF Tab Ini</span>
             </button>
+          </div>
+
+          <!-- Print-Only Active Algorithm & Route Summary -->
+          <div class="hidden print-only pt-2.5 border-t border-slate-200 text-xs">
+            <div class="print-grid-4">
+              <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div class="text-[10px] text-slate-500 font-semibold">Titik Awal (Start)</div>
+                <div class="font-bold text-slate-900">${startObj.id} – ${startObj.shortName}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div class="text-[10px] text-slate-500 font-semibold">Tujuan (Goal)</div>
+                <div class="font-bold text-slate-900">${goalObj.id} – ${goalObj.shortName}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div class="text-[10px] text-slate-500 font-semibold">Algoritma Aktif</div>
+                <div class="font-bold text-brand-900">${algoMeta ? algoMeta.name : appState.selectedAlgo}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div class="text-[10px] text-slate-500 font-semibold">Kriteria Bobot</div>
+                <div class="font-bold text-slate-900">${critInfo.label}</div>
+              </div>
+            </div>
+            <div class="mt-2 p-2 rounded-lg bg-blue-50 border border-blue-200 flex flex-wrap items-center justify-between gap-2">
+              <div><span class="font-semibold text-blue-900">Rute Aktif:</span> <span class="font-mono font-bold text-slate-900">${routeText}</span></div>
+              <div class="font-semibold text-slate-700">${metricText}</div>
+            </div>
           </div>
 
           <!-- Live Synchronized Parameter Bar -->
@@ -1524,7 +1769,7 @@
     function renderSemarangMapSVG(activeResult, altRoutes) {
       if (window.L) {
         appState._mapCtx = { activeResult, altRoutes };
-        return `<div data-leaflet-slot class="viz-contain isolate relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100"></div>`;
+        return `<div data-leaflet-slot class="print-viz-box viz-contain isolate relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100"></div>`;
       }
       const startObj = getNodeById(appState.startNode);
       const goalObj = getNodeById(appState.goalNode);
@@ -1569,7 +1814,7 @@
       const pathNodeSet = new Set(primaryPath);
 
       return `
-        <div data-panzoom="map" class="viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-[#f6f4ee] select-none cursor-grab active:cursor-grabbing">
+        <div data-panzoom="map" class="print-viz-box viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-[#f6f4ee] select-none cursor-grab active:cursor-grabbing">
           <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
             <g class="pz-layer" transform="translate(${appState.pz.map.x} ${appState.pz.map.y}) scale(${appState.pz.map.k})">
             <rect width="440" height="520" fill="#f7f5ef"/>
@@ -1617,7 +1862,7 @@
 
             <!-- Primary Route Callout Pill -->
             ${primaryPath.length > 1 ? `
-              <g transform="translate(${Math.min(300, Math.max(8, primaryMid.x + 14))}, ${Math.min(480, Math.max(28, primaryMid.y - 44))})">
+              <g class="no-print" transform="translate(${Math.min(300, Math.max(8, primaryMid.x + 14))}, ${Math.min(480, Math.max(28, primaryMid.y - 44))})">
                 <rect x="0" y="0" width="132" height="36" rx="8" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
                 <text x="66" y="14" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">${appState.previewAltRoutePath ? 'Rute Pilihan' : `Rute Utama (${activeResult.meta.code})`}</text>
                 <text x="66" y="28" text-anchor="middle" font-size="9.5" font-weight="600" fill="#dbeafe">${formatDecimal(primaryDisplayMetrics.distance)} km • ${primaryDisplayMetrics.time} mnt</text>
@@ -1631,7 +1876,7 @@
               const bx = Math.min(310, Math.max(6, mid.x - 62 + (idx === 0 ? -60 : 60)));
               const by = Math.min(480, Math.max(28, mid.y + pal.dyOffset));
               return `
-                <g transform="translate(${bx}, ${by})">
+                <g class="no-print" transform="translate(${bx}, ${by})">
                   <rect x="0" y="0" width="124" height="33" rx="8" fill="${pal.badgeBg}" stroke="#ffffff" stroke-width="1.4"/>
                   <text x="62" y="13" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">Alternatif #${altR.rank}</text>
                   <text x="62" y="25" text-anchor="middle" font-size="9" font-weight="600" fill="${pal.badgeSub}">${formatDecimal(altR.metrics.distance)} km • ${altR.metrics.time} mnt</text>
@@ -1705,7 +1950,7 @@
       const pathNodeSet = new Set(activePath);
 
       return `
-        <div data-panzoom="graph" class="viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center select-none cursor-grab active:cursor-grabbing">
+        <div data-panzoom="graph" class="print-viz-box viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center select-none cursor-grab active:cursor-grabbing">
           <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
             <g class="pz-layer" transform="translate(${appState.pz.graph.x} ${appState.pz.graph.y}) scale(${appState.pz.graph.k})">
 
@@ -1870,10 +2115,10 @@
       }).join(' → ');
 
       return `
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div class="print-dashboard-root grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
           <!-- LEFT PANEL: PENGATURAN RUTE (Col Span 4) -->
-          <section class="lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
+          <section class="print-hide-panel lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2 text-brand-950 font-bold text-base sm:text-lg">
                 <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center">⚙️</span>
@@ -1983,7 +2228,7 @@
           </section>
 
           <!-- RIGHT / MAIN PANEL (Col Span 8) -->
-          <div class="lg:col-span-8 space-y-5">
+          <div class="print-full-col lg:col-span-8 space-y-5">
 
             <!-- TOP VISUALIZATION CARD: PETA RUTE SEMARANG + GRAF ABSTRAKSI -->
             <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
@@ -2008,14 +2253,14 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 ${appState.viewMode === 'split' ? 'md:grid-cols-12' : ''} gap-3.5">
+              <div class="print-viz-grid grid grid-cols-1 ${appState.viewMode === 'split' ? 'md:grid-cols-12' : ''} gap-3.5">
                 ${appState.viewMode !== 'graph' ? `
-                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6' : 'col-span-1'}">
+                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6 print-col-6' : 'col-span-1 print-col-12'}">
                     ${renderSemarangMapSVG(activeResult, altRoutes)}
                   </div>
                 ` : ''}
                 ${appState.viewMode !== 'map' ? `
-                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6' : 'col-span-1'}">
+                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6 print-col-6' : 'col-span-1 print-col-12'}">
                     ${renderAbstractGraphSVG(activeResult, false)}
                   </div>
                 ` : ''}
@@ -2044,7 +2289,7 @@
                 </div>
               </div>
 
-              <div class="overflow-x-auto max-h-[195px] rounded-xl border border-slate-200">
+              <div class="print-scroll-expand overflow-x-auto max-h-[195px] rounded-xl border border-slate-200">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
                     <tr>
@@ -2064,13 +2309,14 @@
                           Tidak ada lintasan yang menghubungkan ${startObj.shortName} ke ${goalObj.shortName}.
                         </td>
                       </tr>
-                    ` : altRoutes.map(alt => {
+                    ` : altRoutes.map((alt, idx) => {
                       const sig = alt.path.join('-');
                       const isCurrentlyDisplayed = displayedPath.join('-') === sig;
                       const encodedPath = encodeURIComponent(JSON.stringify(alt.path));
+                      const hideInPrint = idx >= 3 && !isCurrentlyDisplayed;
                       return `
                         <tr onclick="selectAlternativeRoute('${encodedPath}')"
-                            class="cursor-pointer transition ${isCurrentlyDisplayed ? 'bg-blue-50/90 font-bold text-blue-950' : 'hover:bg-slate-50 text-slate-700'}">
+                            class="${hideInPrint ? 'print-extra-alt-row ' : ''}cursor-pointer transition ${isCurrentlyDisplayed ? 'bg-blue-50/90 font-bold text-blue-950' : 'hover:bg-slate-50 text-slate-700'}">
                           <td class="py-2 px-3 whitespace-nowrap">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${alt.rank === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}">
                               Rute #${alt.rank}
@@ -2092,10 +2338,11 @@
                   </tbody>
                 </table>
               </div>
+              ${altRoutes.length > 3 ? `<div class="hidden print-only text-[9px] text-slate-500">Menampilkan 3 rute teratas (serta rute pilihan aktif) dari ${altRoutes.length} kemungkinan lintasan sederhana.</div>` : ''}
             </section>
 
             <!-- MIDDLE ROW: HASIL PENCARIAN RUTE + PROSES ALGORITMA -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+            <div class="print-grid-2 grid grid-cols-1 md:grid-cols-12 gap-5">
 
               <!-- Hasil Pencarian Rute (Col Span 6) -->
               <section class="md:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between space-y-4 min-w-0">
@@ -2174,7 +2421,7 @@
                   <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">${activeResult.steps.length} Langkah</span>
                 </div>
 
-                <div class="overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
+                <div class="print-scroll-expand overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
                   <table class="w-full text-left border-collapse text-xs">
                     <thead class="bg-slate-50 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
                       <tr>
@@ -2184,16 +2431,20 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                      ${activeResult.steps.map(s => `
-                        <tr class="${s.isGoal ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
+                      ${activeResult.steps.map((s, idx) => {
+                        const hideStepInPrint = activeResult.steps.length > 9 && idx >= 7 && !s.isGoal;
+                        return `
+                        <tr class="${hideStepInPrint ? 'print-extra-step-row ' : ''}${s.isGoal ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
                           <td class="py-1.5 px-2.5 text-center font-mono whitespace-nowrap">${s.step}</td>
                           <td class="py-1.5 px-2.5 font-bold whitespace-nowrap">${s.focus}</td>
                           <td class="py-1.5 px-2.5 font-mono text-[11px] break-words">${s.detail}</td>
                         </tr>
-                      `).join('')}
+                      `;
+                      }).join('')}
                     </tbody>
                   </table>
                 </div>
+                ${activeResult.steps.length > 9 ? `<div class="hidden print-only text-[9px] text-slate-500">Ringkasan langkah cetak (detail lengkap pada tab Algoritma).</div>` : ''}
               </section>
             </div>
 
@@ -2238,6 +2489,7 @@
                   </tbody>
                 </table>
               </div>
+              ${altRoutes.length > 3 ? `<div class="hidden print-only text-[9px] text-slate-500">Menampilkan 3 rute teratas (serta rute pilihan aktif) dari ${altRoutes.length} kemungkinan lintasan sederhana.</div>` : ''}
             </section>
 
           </div>
@@ -2278,7 +2530,7 @@
           )}
 
           <!-- Mathematical Graph Properties Summary -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div class="print-grid-4 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80">
               <div class="text-xs text-slate-500 font-medium">Orde Graf |V| (Simpul)</div>
               <div class="text-2xl font-extrabold text-brand-900 mt-1">${V} Titik</div>
@@ -2301,8 +2553,8 @@
           </div>
 
           <!-- Interactive Graph Canvas + Edge Editor -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="print-col-7 lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 class="font-bold text-slate-900 text-base">Visualisasi Graf Abstraksi Interaktif</h3>
@@ -2316,7 +2568,7 @@
             </div>
 
             <!-- Interactive Edge Weight Modifier & Adder -->
-            <div class="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
+            <div class="print-col-5 lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
               <h3 class="font-bold text-slate-900 text-base">🧪 Laboratorium Modifikasi Sisi (Edge)</h3>
               <p class="text-xs text-slate-500">Ubah bobot jalan (misal simulasi macet) atau tambah ruas jalan baru untuk melihat perubahan rute di semua tab.</p>
 
@@ -2349,7 +2601,7 @@
                 </button>
               </form>
 
-              <div class="max-h-[190px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+              <div class="print-scroll-expand max-h-[190px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
                 ${appState.edges.map(e => `
                   <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                     <div class="min-w-0">
@@ -2371,11 +2623,11 @@
           </div>
 
           <!-- Adjacency Matrix & Degree Sequence Table -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="print-col-7 lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <h3 class="font-bold text-slate-900 text-base">Matriks Ketetanggaan Berbobot (${getCriteriaInfo(appState.weightCriteria).label})</h3>
-              <div class="overflow-x-auto rounded-xl border border-slate-200">
-                <table class="w-full text-center border-collapse text-xs font-mono">
+              <div class="print-scroll-expand overflow-x-auto rounded-xl border border-slate-200">
+                <table class="print-matrix-table w-full text-center border-collapse text-xs font-mono">
                   <thead class="bg-slate-100 text-slate-700 font-bold">
                     <tr>
                       <th class="p-2 border-b border-r border-slate-200">V</th>
@@ -2400,9 +2652,9 @@
               </div>
             </div>
 
-            <div class="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+            <div class="print-col-5 lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <h3 class="font-bold text-slate-900 text-base">Derajat Simpul deg(v) & Adjacency List</h3>
-              <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <div class="print-scroll-expand overflow-x-auto rounded-xl border border-slate-200">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead class="bg-slate-100 text-slate-700 font-semibold">
                     <tr>
@@ -2531,8 +2783,8 @@
           </div>
 
           <!-- Algorithm Theory & Complexity Cards -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="print-col-7 lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 text-xs font-bold">${meta.category}</span>
                 <div class="flex items-center gap-2 text-xs font-mono">
@@ -2548,18 +2800,18 @@
             </div>
 
             <!-- Pseudocode Block -->
-            <div class="lg:col-span-5 bg-slate-900 text-slate-100 rounded-2xl p-5 card-shadow space-y-2.5">
+            <div class="print-col-5 lg:col-span-5 bg-slate-900 text-slate-100 rounded-2xl p-5 card-shadow space-y-2.5">
               <div class="flex items-center justify-between text-xs text-slate-400">
                 <span class="font-bold text-indigo-300">Pseudocode (${meta.code})</span>
                 <span class="font-mono">Matematika Diskrit</span>
               </div>
-              <pre class="font-mono text-xs leading-relaxed text-emerald-300 overflow-x-auto">${meta.pseudocode.join('\n')}</pre>
+              <pre class="print-code-pre font-mono text-xs leading-relaxed text-emerald-300 overflow-x-auto">${meta.pseudocode.join('\n')}</pre>
             </div>
           </div>
 
           <!-- Interactive Step-by-Step Playback & Visual Graph -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="print-col-6 lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-bold text-slate-900 text-base">Visualisasi Hasil (${meta.code})</h3>
                 <span class="text-xs font-bold text-brand-700 break-words">${activeResult.found ? activeResult.path.join(' → ') : 'Tidak ada rute'}</span>
@@ -2568,7 +2820,7 @@
             </div>
 
             <!-- Step Scrubber & Trace Table -->
-            <div class="lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
+            <div class="print-col-6 lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-bold text-slate-900 text-base">Simulasi Iterasi (Langkah ${clampedIdx + 1} / ${totalSteps})</h3>
                 <div class="flex items-center gap-1.5 no-print">
@@ -2585,7 +2837,7 @@
                 <div class="font-mono text-xs text-slate-800">${currentStepObj.detail}</div>
               </div>
 
-              <div class="overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
+              <div class="print-scroll-expand overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead class="bg-slate-50 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
                     <tr>
@@ -2612,8 +2864,8 @@
           ${appState.selectedAlgo === 'floyd' && activeResult.matrix ? `
             <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
               <h3 class="font-bold text-slate-900 text-base">Matriks Jarak Terpendek Semua Pasangan (Floyd-Warshall Output)</h3>
-              <div class="overflow-x-auto rounded-xl border border-slate-200">
-                <table class="w-full text-center border-collapse text-xs font-mono">
+              <div class="print-scroll-expand overflow-x-auto rounded-xl border border-slate-200">
+                <table class="print-matrix-table w-full text-center border-collapse text-xs font-mono">
                   <thead class="bg-brand-900 text-white">
                     <tr>
                       <th class="p-2">Dari \ Ke</th>
@@ -2723,7 +2975,7 @@
           )}
 
           <!-- Analytical Insight Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="print-grid-3 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-emerald-500">
               <div class="text-xs font-bold text-emerald-700 uppercase">Rute Bobot Paling Optimal</div>
               <div class="text-base font-extrabold text-slate-900 mt-1">
@@ -2756,7 +3008,7 @@
           </div>
 
           <!-- Visual Bar Charts -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="print-grid-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
               <h3 class="font-bold text-slate-900 text-sm sm:text-base">Grafik Perbandingan Bobot Rute (${critInfo.label})</h3>
               <div class="space-y-2.5 pt-1">
@@ -2807,8 +3059,8 @@
               <span class="text-xs text-slate-500">Klik baris untuk memilih algoritma aktif</span>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
-              <table class="w-full text-left border-collapse text-xs">
+            <div class="print-scroll-expand overflow-x-auto rounded-xl border border-slate-200">
+              <table class="print-bench-table w-full text-left border-collapse text-xs">
                 <thead class="bg-brand-950 text-white font-semibold">
                   <tr>
                     <th class="py-3 px-3">Algoritma</th>
@@ -2844,6 +3096,51 @@
               </table>
             </div>
           </div>
+
+          <!-- Poin-Poin Kesimpulan Perbandingan -->
+          ${(() => {
+            const dfsRes = allResults.find(r => r.algoId === 'dfs');
+            const floydRes = allResults.find(r => r.algoId === 'floyd');
+            const primRes = allResults.find(r => r.algoId === 'prim');
+            const startObj = getNodeById(appState.startNode);
+            const goalObj = getNodeById(appState.goalNode);
+            const astarDiff = dijkstraRes.visitedCount - astarRes.visitedCount;
+            return `
+              <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span class="text-brand-600">📝</span> Poin-Poin Kesimpulan (${startObj.shortName} → ${goalObj.shortName} · ${critInfo.label})
+                  </h3>
+                </div>
+                <ul class="space-y-2 text-xs sm:text-sm text-slate-700 list-disc pl-5 leading-relaxed">
+                  <li>
+                    <strong>Optimalitas Bobot (Dijkstra, A*, Floyd-Warshall):</strong>
+                    ${dijkstraRes.found
+                      ? `Ketiga algoritma menjamin bobot terpendek untuk kriteria <strong>${critInfo.label}</strong> dengan hasil terbaik <strong>${formatCritVal(dijkstraRes)}</strong> pada rute <span class="font-mono font-semibold">${dijkstraRes.path.join(' → ')}</span>.`
+                      : `Simpul asal dan tujuan saat ini tidak terhubung pada graf.`}
+                  </li>
+                  <li>
+                    <strong>Efisiensi Ekspansi Simpul (A* vs Dijkstra vs Floyd-Warshall):</strong>
+                    A* mengevaluasi <strong>${astarRes.visitedCount} simpul</strong>${astarDiff > 0 ? ` (lebih hemat <strong>${astarDiff} simpul</strong> dibanding Dijkstra yang mengunjungi <strong>${dijkstraRes.visitedCount} simpul</strong>)` : ` dibanding Dijkstra (<strong>${dijkstraRes.visitedCount} simpul</strong>)`} karena dipandu heuristik menuju tujuan, sedangkan Floyd-Warshall menghitung seluruh pasangan (${floydRes.visitedCount} simpul, kompleksitas <code>O(|V|³)</code>).
+                  </li>
+                  <li>
+                    <strong>Traversal Tak Berbobot (BFS vs DFS):</strong>
+                    ${bfsRes.found
+                      ? `BFS menghasilkan lintasan dengan jumlah sisi paling sedikit (<strong>${bfsRes.edgeCount} sisi</strong>, bobot <strong>${formatCritVal(bfsRes)}</strong>), sedangkan DFS menelusuri cabang hingga kedalaman <strong>${dfsRes.edgeCount} sisi</strong> (bobot <strong>${formatCritVal(dfsRes)}</strong>) dan tidak menjamin rute terpendek.`
+                      : `BFS dan DFS tidak menemukan lintasan karena graf terputus.`}
+                  </li>
+                  <li>
+                    <strong>Optimasi Jaringan Menyeluruh (Prim & Kruskal MST):</strong>
+                    Berbeda dari pencarian rute tunggal, Prim dan Kruskal membangun <em>Minimum Spanning Tree</em> yang menghubungkan seluruh <strong>${appState.nodes.length} simpul</strong> dengan <strong>${appState.nodes.length - 1} sisi</strong> tanpa siklus (${primRes.summaryNote}), sehingga jalur antar dua titik di dalam MST belum tentu rute terpendek.
+                  </li>
+                  <li>
+                    <strong>Rekomendasi Pemilihan Algoritma:</strong>
+                    Gunakan <strong>A*</strong> atau <strong>Dijkstra</strong> untuk navigasi rute terpendek satu pasang titik, <strong>Floyd-Warshall</strong> untuk tabel jarak semua pasangan titik, <strong>BFS</strong> bila ingin meminimalkan jumlah transit/persimpangan, serta <strong>Prim/Kruskal</strong> untuk perancangan jaringan infrastruktur minimum.
+                  </li>
+                </ul>
+              </div>
+            `;
+          })()}
         </div>
       `;
     }
@@ -2935,8 +3232,8 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-7 space-y-3.5">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="print-col-7 lg:col-span-7 space-y-3.5">
               <h3 class="font-bold text-slate-900 text-base px-1">📋 Daftar Percobaan Simulasi (Verifikasi Otomatis)</h3>
               ${LAB_TASKS.map(task => {
                 const isDone = !!appState.challengeProgress.completedTasks[task.id];
@@ -2965,7 +3262,7 @@
               }).join('')}
             </div>
 
-            <div class="lg:col-span-5 space-y-3.5">
+            <div class="print-col-5 lg:col-span-5 space-y-3.5">
               <h3 class="font-bold text-slate-900 text-base px-1">🧠 Kuis Evaluasi Teori Graf</h3>
               ${QUIZ_QUESTIONS.map((q, qIdx) => {
                 const chosen = appState.challengeProgress.quizAnswers[q.id];
@@ -3042,9 +3339,9 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div class="print-grid-12 grid grid-cols-1 lg:grid-cols-12 gap-5">
             <!-- Student Identity Card (Used in PDF Print Header) -->
-            <div class="lg:col-span-5 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
+            <div class="print-col-5 lg:col-span-5 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
               <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
                 <div class="w-12 h-12 rounded-2xl btn-primary-gradient text-white flex items-center justify-center text-xl font-extrabold shadow">
                   ${appState.student.name.charAt(0).toUpperCase()}
@@ -3079,7 +3376,7 @@
             </div>
 
             <!-- Academic Documentation & 7 Algorithms Summary -->
-            <div class="lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
+            <div class="print-col-7 lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
               <h3 class="font-bold text-slate-900 text-base">📚 Ringkasan Materi Matematika Diskrit: Graf & Aplikasinya</h3>
               <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Dalam Matematika Diskrit, graf didefinisikan sebagai pasangan terurut <strong>G = (V, E)</strong> di mana <strong>V</strong> adalah himpunan tidak kosong dari simpul (<em>vertices</em>) yang merepresentasikan lokasi penting di Kota Semarang (seperti Polines, Simpang Lima, Tugu Muda, dan Lawang Sewu), sedangkan <strong>E</strong> adalah himpunan sisi (<em>edges</em>) yang merepresentasikan ruas jalan penghubung dengan bobot jarak (km), waktu tempuh (menit), maupun biaya perjalanan (Rp).
@@ -3140,7 +3437,7 @@
       const syncAlgoEl = document.getElementById('sidebar-sync-algo');
       const syncCritEl = document.getElementById('sidebar-sync-criteria');
       if (syncRouteEl) syncRouteEl.textContent = `${appState.startNode} → ${appState.goalNode}`;
-      if (syncAlgoEl) syncAlgoEl.textContent = algoMeta ? algoMeta.code : 'Dijkstra';
+      if (syncAlgoEl) syncAlgoEl.textContent = algoMeta ? algoMeta.code : 'BFS';
       if (syncCritEl) syncCritEl.textContent = getCriteriaInfo(appState.weightCriteria).label;
     }
 
@@ -3265,9 +3562,9 @@
     // -----------------------------------------------------------------------
     const leaf = { map: null, el: null, renderer: null, layer: null, legend: null, legendEl: null, lastRouteBounds: null };
 
-    function leafFit() {
+    function leafFit(padding = [36, 36], animate = true) {
       if (!leaf.map || !appState.nodes.length) return;
-      leaf.map.fitBounds(appState.nodes.map(n => [n.lat, n.lon]), { padding: [36, 36] });
+      leaf.map.fitBounds(appState.nodes.map(n => [n.lat, n.lon]), { padding, animate });
     }
 
     function leafFocusRoute() {
@@ -3294,6 +3591,7 @@
           wheelDebounceTime: 80,
           wheelPxPerZoomLevel: 90
         });
+        if (leaf.map.attributionControl) leaf.map.attributionControl.setPrefix('Leaflet');
         // 1 sumber peta tunggal (CARTO Voyager, tile 256px standar agar ringan & cepat)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_5fk7_1_7284e8c331cb2e9e221ec42d', {
           subdomains: 'abcd',
@@ -3555,6 +3853,13 @@
             : (idx < 0 ? 0 : (idx + (e.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length);
           items[next].focus();
         }
+      });
+      window.addEventListener('beforeprint', () => {
+        syncPrintHeaderFields();
+        enterPrintPrep();
+      });
+      window.addEventListener('afterprint', () => {
+        exitPrintPrep();
       });
       renderApp();
     }
