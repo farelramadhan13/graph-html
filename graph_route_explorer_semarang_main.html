@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graph Route Explorer – Semarang | Matematika Diskrit</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              950: '#1d1454',
+              900: '#281c6e',
+              800: '#35268c',
+              700: '#4532b0',
+              600: '#5842d6',
+              500: '#6e57eb',
+              100: '#ebe8ff',
+              50: '#f5f4ff',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Custom scrollbar & smooth transitions */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #eef1f8;
+      color: #1e293b;
+    }
+
+    .header-gradient {
+      background: linear-gradient(125deg, #241866 0%, #3d2a9e 52%, #553cc9 100%);
+    }
+
+    .sidebar-gradient {
+      background: linear-gradient(180deg, #2d207a 0%, #231861 100%);
+    }
+
+    .btn-primary-gradient {
+      background: linear-gradient(135deg, #5239c9 0%, #6d52f2 100%);
+    }
+    .btn-primary-gradient:hover {
+      background: linear-gradient(135deg, #462eb8 0%, #5d42e3 100%);
+    }
+
+    .card-shadow {
+      box-shadow: 0 4px 20px -2px rgba(36, 24, 102, 0.06), 0 1px 4px -1px rgba(36, 24, 102, 0.04);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Animated dashed edge flow for active route */
+    @keyframes dashFlow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    .route-flow {
+      stroke-dasharray: 8 4;
+      animation: dashFlow 1s linear infinite;
+    }
+
+    /* Print / PDF Styles */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .main-content-wrapper {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+      }
+      .card-shadow {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- Toast Notification Container (Replaces alert/confirm) -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+  <!-- Print-Only Academic Report Header -->
+  <div id="print-report-header" class="hidden print-only mb-4 pb-3 border-b-2 border-brand-800">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs font-bold uppercase tracking-wider text-brand-700">Laporan Praktikum & Eksperimen Matematika Diskrit</div>
+        <h1 class="text-xl font-extrabold text-slate-900">Graph Route Explorer – Kota Semarang</h1>
+        <p id="print-tab-subtitle" class="text-xs text-slate-600 mt-0.5">Tab: Dashboard Simulasi Rute</p>
+      </div>
+      <div class="text-right text-xs text-slate-700 leading-relaxed">
+        <div><span class="font-semibold">Mahasiswa:</span> <span id="print-student-name">Farel</span> (<span id="print-student-nim">4.33.24.0.12</span>)</div>
+        <div><span class="font-semibold">Program Studi:</span> <span id="print-student-prodi">D4 Teknologi Rekayasa Komputer – Polines</span></div>
+        <div><span class="font-semibold">Parameter Aktif:</span> <span id="print-active-params">Polines → Lawang Sewu | Dijkstra | Jarak (km)</span></div>
+        <div class="text-[11px] text-slate-500" id="print-timestamp"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Application Banner Header -->
+  <header class="header-gradient text-white relative overflow-hidden shadow-lg z-30 no-print">
+    <!-- Decorative Semarang Skyline & Lawang Sewu Vector Illustration on Right -->
+    <svg class="absolute right-0 bottom-0 h-full w-auto opacity-25 pointer-events-none select-none" viewBox="0 0 620 110" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMaxYMax slice">
+      <path d="M0 110 Q140 45 290 78 T620 55 L620 110 Z" fill="#1b114d"/>
+      <path d="M120 110 Q280 58 440 82 T620 68 L620 110 Z" fill="#2d1e7a"/>
+      <g fill="#f8fafc">
+        <rect x="420" y="54" width="165" height="56" rx="2"/>
+        <polygon points="414,54 502,34 590,54"/>
+        <rect x="435" y="24" width="22" height="32"/>
+        <polygon points="432,24 446,10 460,24"/>
+        <circle cx="446" cy="10" r="2.5"/>
+        <rect x="548" y="24" width="22" height="32"/>
+        <polygon points="545,24 559,10 573,24"/>
+        <circle cx="559" cy="10" r="2.5"/>
+        <rect x="432" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="448" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="464" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="480" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="496" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="512" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="528" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="544" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="560" y="64" width="10" height="16" rx="5" fill="#35268c"/>
+        <rect x="432" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="448" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="464" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="480" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="496" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="512" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="528" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="544" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <rect x="560" y="88" width="10" height="22" rx="5" fill="#35268c"/>
+        <polygon points="365,110 372,42 376,34 380,42 387,110"/>
+        <rect x="358" y="98" width="36" height="12" rx="2"/>
+        <rect x="315" y="46" width="24" height="64" rx="2" opacity="0.8"/>
+        <rect x="288" y="62" width="20" height="48" rx="2" opacity="0.65"/>
+      </g>
+    </svg>
+
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 relative z-10">
+      <div class="flex items-center gap-3.5">
+        <!-- Mobile Sidebar Toggle Button -->
+        <button id="mobile-menu-btn" type="button" class="lg:hidden p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition" aria-label="Buka Menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+
+        <!-- Custom Graph + Location Pin Brand Logo -->
+        <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+          <svg class="w-9 h-9" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="10" y1="28" x2="18" y2="16" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="10" y1="28" x2="22" y2="34" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="18" y1="16" x2="22" y2="34" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="18" y1="16" x2="31" y2="22" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="22" y1="34" x2="31" y2="22" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="10" cy="28" r="3.5" fill="#3b82f6" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="18" cy="16" r="3.5" fill="#ffffff"/>
+            <circle cx="22" cy="34" r="3.5" fill="#ffffff"/>
+            <path d="M31 7C26.8 7 23.5 10.2 23.5 14.3C23.5 19.6 31 26.5 31 26.5C31 26.5 38.5 19.6 38.5 14.3C38.5 10.2 35.2 7 31 7Z" fill="#ef4444" stroke="#ffffff" stroke-width="1.8"/>
+            <circle cx="31" cy="14" r="2.7" fill="#ffffff"/>
+          </svg>
+        </div>
+
+        <div>
+          <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight leading-tight">
+            Graph Route Explorer – Semarang
+          </h1>
+          <p class="text-xs sm:text-sm text-indigo-100/90 font-normal">
+            Belajar Graf melalui Pencarian Rute di Kota Semarang
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Header Student Badge & Global Print PDF -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="hidden md:flex items-center gap-2.5 bg-white/10 backdrop-blur-md border border-white/15 px-3.5 py-1.5 rounded-xl text-xs">
+          <div class="w-7 h-7 rounded-lg bg-indigo-400/30 flex items-center justify-center font-bold text-white">F</div>
+          <div class="leading-tight">
+            <div class="font-semibold text-white" id="header-student-name">Farel • D4 TRK</div>
+            <div class="text-[11px] text-indigo-200">Matematika Diskrit (Graf)</div>
+          </div>
+        </div>
+
+        <button onclick="triggerPrintPDF()" type="button" class="flex items-center gap-2 bg-white text-brand-900 hover:bg-indigo-50 font-semibold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow-md transition active:scale-95">
+          <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          <span>Print PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Layout: Left Sidebar + Dynamic Content Area -->
+  <div class="flex-1 flex relative max-w-[1600px] w-full mx-auto">
+
+    <!-- Mobile Backdrop -->
+    <div id="sidebar-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden no-print"></div>
+
+    <!-- Left Navigation Sidebar (6 Menus) -->
+    <aside id="app-sidebar" class="sidebar-gradient text-white w-64 shrink-0 flex flex-col justify-between fixed lg:static inset-y-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out shadow-xl lg:shadow-none no-print">
+      <div class="p-3.5 space-y-1.5 mt-2">
+        <div class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-indigo-300/80 flex items-center justify-between">
+          <span>Menu Navigasi</span>
+          <button onclick="toggleMobileSidebar(false)" type="button" class="lg:hidden text-indigo-200 hover:text-white p-1">✕</button>
+        </div>
+
+        <!-- 6 Navigation Buttons -->
+        <nav id="sidebar-nav" class="space-y-1.5"></nav>
+
+        <!-- Active Sync Status Card in Sidebar -->
+        <div class="mt-6 mx-1 p-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm text-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-indigo-200">Status Sinkronisasi</span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live
+            </span>
+          </div>
+          <div class="space-y-1 text-indigo-100/90 text-[11px]">
+            <div class="flex justify-between">
+              <span class="text-indigo-300">Rute:</span>
+              <span id="sidebar-sync-route" class="font-semibold text-white">A → G</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-indigo-300">Algoritma:</span>
+              <span id="sidebar-sync-algo" class="font-semibold text-amber-300">Dijkstra</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-indigo-300">Bobot:</span>
+              <span id="sidebar-sync-criteria" class="font-semibold text-white">Jarak (km)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer Info -->
+      <div class="p-4 border-t border-white/10 text-[11px] text-indigo-200/80 space-y-1">
+        <div class="font-semibold text-white">Lab Matematika Diskrit</div>
+        <div>D4 Teknologi Rekayasa Komputer</div>
+        <div class="text-indigo-300/70">Politeknik Negeri Semarang</div>
+      </div>
+    </aside>
+
+    <!-- Dynamic Main Tab Viewport -->
+    <main class="main-content-wrapper flex-1 min-w-0 p-3.5 sm:p-5 lg:p-6">
+      <div id="tab-content-root" class="space-y-5">
+        <!-- Active Tab Content Rendered Dynamically Here -->
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT GRAPH ENGINE, 7 ALGORITHMS & SYNCHRONIZED UI CONTROLLERS   -->
+  <!-- ===================================================================== -->
+  <script>
+    // -----------------------------------------------------------------------
+    // 1. SEMARANG GRAPH DATASET (Nodes & Weighted Edges)
+    // -----------------------------------------------------------------------
+    const INITIAL_EDGES = [];
+    // Koordinat (lat, lon) adalah pendekatan (akurasi sekitar 100-300 m); Lawang Sewu dan Polines
+    // dicocokkan dengan sumber publik (Lawang Sewu: 6°59'2" LS; Polines: Jl. Prof. Soedarto, Tembalang).
+    // side: sisi penempatan label ('r' kanan, 'l' kiri) agar label tidak bertumpuk.
+    const INITIAL_NODES = [
+      { id: 'A', name: 'Polines (Politeknik Negeri Semarang)', shortName: 'Polines', area: 'Tembalang', lat: -7.0520, lon: 110.4360, side: 'l' },
+      { id: 'B', name: 'Jatingaleh / Gerbang Gombel', shortName: 'Jatingaleh', area: 'Candisari', lat: -7.0120, lon: 110.4170, side: 'l' },
+      { id: 'C', name: 'Candisari / Jangli', shortName: 'Candisari', area: 'Candisari', lat: -7.0030, lon: 110.4290, side: 'r' },
+      { id: 'D', name: 'Simpang Lima Semarang', shortName: 'Simpang Lima', area: 'Pusat Kota', lat: -6.9905, lon: 110.4229, side: 'r' },
+      { id: 'E', name: 'Masjid Agung Jawa Tengah (MAJT)', shortName: 'MAJT', area: 'Gayamsari', lat: -7.0073, lon: 110.4457, side: 'l' },
+      { id: 'F', name: 'Kelenteng Sam Poo Kong', shortName: 'Sam Poo Kong', area: 'Semarang Barat', lat: -7.0050, lon: 110.4010, side: 'l' },
+      { id: 'G', name: 'Lawang Sewu Semarang', shortName: 'Lawang Sewu', area: 'Tugu Muda', lat: -6.9839, lon: 110.4107, side: 'l' },
+      { id: 'H', name: 'Kota Lama (Gereja Blenduk) / Stasiun Tawang', shortName: 'Kota Lama', area: 'Semarang Utara', lat: -6.9680, lon: 110.4283, side: 'r' },
+      { id: 'I', name: 'Pelabuhan Tanjung Emas', shortName: 'Tj. Emas', area: 'Semarang Utara', lat: -6.9500, lon: 110.4220, side: 'r' },
+      { id: 'J', name: 'Bandara Ahmad Yani', shortName: 'Bandara A. Yani', area: 'Semarang Barat', lat: -6.9714, lon: 110.3746, side: 'r' },
+      { id: 'K', name: 'Pasar Johar', shortName: 'Pasar Johar', area: 'Kauman', lat: -6.9726, lon: 110.4247, side: 'l' },
+      { id: 'L', name: 'Stasiun Poncol', shortName: 'Stasiun Poncol', area: 'Semarang Utara', lat: -6.9660, lon: 110.4175, side: 'l' },
+      { id: 'M', name: 'Banyumanik (Jl. Setiabudi)', shortName: 'Banyumanik', area: 'Banyumanik', lat: -7.0640, lon: 110.4210, side: 'r' }
+    ];
+
+    // Ruas jalan (tak berarah). Nama ruas bersifat indikatif untuk keperluan pembelajaran.
+    const RAW_EDGES = [
+      ['A','B','Jl. Prof. Soedarto – Gombel'], ['A','C','Jl. Ngesrep Timur – Jl. Sultan Agung'],
+      ['A','E','Jl. Kedungmundu – Jl. Gajah Raya'], ['E','C','Jl. Sultan Agung'],
+      ['E','D','Jl. Gajah Raya – Jl. Majapahit'], ['B','C','Jl. Teuku Umar'],
+      ['B','D','Jl. Sriwijaya – Jl. Pahlawan'], ['B','F','Jl. Kaligarang – Jl. Simongan'],
+      ['B','M','Jl. Setiabudi'], ['C','D','Jl. Dr. Sutomo'],
+      ['F','G','Jl. Simongan – Jl. Imam Bonjol'], ['F','J','Jl. Siliwangi'],
+      ['D','G','Jl. Pandanaran – Jl. Pemuda'], ['D','K','Jl. Gajah Mada'],
+      ['G','K','Jl. Pemuda'], ['G','L','Jl. Imam Bonjol'],
+      ['K','H','Jl. Kh. Agus Salim – Jl. Letjen Suprapto'], ['L','H','Jl. Ronggowarsito'],
+      ['H','I','Jl. Yos Sudarso'], ['L','I','Jl. Arteri Yos Sudarso'],
+      ['J','L','Jl. Siliwangi – Jl. Arteri']
+    ];
+
+    // Bobot dihitung dari koordinat: jarak = garis lurus (haversine) x 1,3 (faktor jalan);
+    // waktu = jarak / kecepatan rata-rata (pusat kota 18, luar pusat 25, arteri bandara/pelabuhan 32 km/jam);
+    // biaya = Rp2.500/km dibulatkan ke Rp500. Semua bobot adalah ESTIMASI, bukan hasil survei.
+    function haversineKm(a, b) {
+      const R = 6371, rad = Math.PI / 180;
+      const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    (function buildGeoDataset() {
+      // Proyeksi seragam (px per km sama di kedua sumbu) -> peta dan graf konsisten secara geometris.
+      const lat0 = INITIAL_NODES.reduce((s, n) => s + n.lat, 0) / INITIAL_NODES.length;
+      const kmLon = 111.32 * Math.cos(lat0 * Math.PI / 180), kmLat = 110.57;
+      const lons = INITIAL_NODES.map(n => n.lon), lats = INITIAL_NODES.map(n => n.lat);
+      const wKm = (Math.max(...lons) - Math.min(...lons)) * kmLon;
+      const hKm = (Math.max(...lats) - Math.min(...lats)) * kmLat;
+      const VB_W = 440, VB_H = 520, PAD_X = 90, PAD_Y = 42;
+      const s = Math.min((VB_W - 2 * PAD_X) / wKm, (VB_H - 2 * PAD_Y) / hKm);
+      const offX = (VB_W - wKm * s) / 2;
+      INITIAL_NODES.forEach(n => {
+        n.mapX = Math.round(offX + (n.lon - Math.min(...lons)) * kmLon * s);
+        n.mapY = Math.round(PAD_Y + (Math.max(...lats) - n.lat) * kmLat * s);
+        n.graphX = n.mapX; n.graphY = n.mapY;
+      });
+      const byId = Object.fromEntries(INITIAL_NODES.map(n => [n.id, n]));
+      const center = new Set(['D', 'G', 'K', 'H', 'L']);
+      INITIAL_EDGES.push(...RAW_EDGES.map(([from, to, road], k) => {
+        const dist = Math.max(0.1, Math.round(haversineKm(byId[from], byId[to]) * 1.3 * 10) / 10);
+        const speed = (center.has(from) && center.has(to)) ? 18 : (['J', 'I'].includes(from) || ['J', 'I'].includes(to)) ? 32 : 25;
+        return { id: 'e' + (k + 1), from, to, distance: dist, time: Math.max(1, Math.round(dist / speed * 60)),
+                 cost: Math.max(500, Math.round(dist * 2500 / 500) * 500), road };
+      }));
+    })();
+
+    // -----------------------------------------------------------------------
+    // 2. 7 ALGORITHMS METADATA & DEFINITIONS (Synced Across All Tabs)
+    // -----------------------------------------------------------------------
+    const ALGORITHMS_META = [
+      {
+        id: 'bfs',
+        code: 'BFS',
+        name: 'Breadth-First Search (BFS)',
+        shortLabel: 'BFS – Jalur dengan jumlah sisi minimum',
+        category: 'Uninformed Search (Traversal)',
+        optimalNote: 'Optimal untuk jumlah sisi (hop) minimum, bukan bobot',
+        timeComplexity: 'O(|V| + |E|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Menjelajahi graf secara melebar lapis demi lapis menggunakan struktur data Antrean (Queue FIFO). Menjamin jalur dengan jumlah sisi (edge) paling sedikit.',
+        pseudocode: [
+          '1. Masukkan simpul awal (Start) ke Queue Q dan tandai visited',
+          '2. Selama Q tidak kosong:',
+          '3.    u ← Q.dequeue()',
+          '4.    Jika u == Goal, rekonstruksi jalur & berhenti',
+          '5.    Untuk setiap tetangga v dari u:',
+          '6.       Jika v belum visited: tandai visited, parent[v] ← u, Q.enqueue(v)'
+        ]
+      },
+      {
+        id: 'dfs',
+        code: 'DFS',
+        name: 'Depth-First Search (DFS)',
+        shortLabel: 'DFS – Eksplorasi semua kemungkinan',
+        category: 'Uninformed Search (Traversal)',
+        optimalNote: 'Eksplorasi mendalam (tidak menjamin rute terpendek)',
+        timeComplexity: 'O(|V| + |E|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Menjelajahi cabang graf sedalam mungkin sebelum melakukan backtracking menggunakan Tumpukan (Stack LIFO). Berguna untuk pengecekan konektivitas & siklus.',
+        pseudocode: [
+          '1. Push simpul awal (Start) ke Stack S',
+          '2. Selama S tidak kosong:',
+          '3.    u ← S.pop()',
+          '4.    Jika u belum visited:',
+          '5.       Tandai u visited; Jika u == Goal, kembalikan jalur',
+          '6.       Push semua tetangga v dari u yang belum visited ke Stack S'
+        ]
+      },
+      {
+        id: 'dijkstra',
+        code: 'Dijkstra',
+        name: 'Algoritma Dijkstra',
+        shortLabel: 'Dijkstra – Rute Terpendek (Bobot)',
+        category: 'Greedy Shortest Path',
+        optimalNote: 'Jarak / bobot terpendek (optimal untuk bobot non-negatif)',
+        timeComplexity: 'O((|V| + |E|) log |V|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Menghitung lintasan terpendek dari satu titik sumber ke seluruh simpul pada graf berbobot non-negatif dengan teknik relaksasi sisi secara greedy.',
+        pseudocode: [
+          '1. Inisialisasi d[v] ← ∞ untuk semua v ∈ V, dan d[Start] ← 0',
+          '2. Masukkan semua simpul ke Priority Queue PQ',
+          '3. Selama PQ tidak kosong:',
+          '4.    u ← simpul dengan nilai d[u] minimum di PQ',
+          '5.    Untuk setiap sisi (u, v) dengan bobot w(u, v):',
+          '6.       Jika d[u] + w(u, v) < d[v]: d[v] ← d[u] + w(u, v), parent[v] ← u'
+        ]
+      },
+      {
+        id: 'astar',
+        code: 'A*',
+        name: 'Algoritma A* (A-Star)',
+        shortLabel: 'A* – Rute efisien dengan heuristik',
+        category: 'Informed Heuristic Search',
+        optimalNote: 'Rute optimal dengan heuristik (ekspansi simpul lebih efisien)',
+        timeComplexity: 'O(|E| log |V|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Menggabungkan biaya aktual g(n) dari titik awal dengan estimasi heuristik h(n) menuju tujuan: f(n) = g(n) + h(n), sehingga pencarian terarah langsung ke Goal.',
+        pseudocode: [
+          '1. g[Start] ← 0, f[Start] ← h(Start, Goal), masukkan Start ke OpenSet',
+          '2. Selama OpenSet tidak kosong:',
+          '3.    u ← simpul di OpenSet dengan f[u] = g[u] + h(u) terkecil',
+          '4.    Jika u == Goal, kembalikan jalur optimal',
+          '5.    Untuk setiap tetangga v dari u:',
+          '6.       tentative_g ← g[u] + w(u, v); jika lebih kecil, perbarui g[v] & f[v]'
+        ]
+      },
+      {
+        id: 'floyd',
+        code: 'Floyd-Warshall',
+        name: 'Algoritma Floyd-Warshall',
+        shortLabel: 'Floyd-Warshall – Jarak semua pasangan titik',
+        category: 'Dynamic Programming (All-Pairs)',
+        optimalNote: 'Optimal global untuk seluruh pasangan simpul (All-Pairs)',
+        timeComplexity: 'O(|V|³)',
+        spaceComplexity: 'O(|V|²)',
+        description: 'Menggunakan pemrograman dinamis untuk menemukan jarak terpendek antara SEMUA pasangan titik (i, j) dengan menguji setiap simpul k sebagai perantara.',
+        pseudocode: [
+          '1. Inisialisasi matriks dist[i][j] = w(i, j) dan next[i][j] = j',
+          '2. Untuk k = 1 sampai |V| (simpul perantara):',
+          '3.    Untuk i = 1 sampai |V|:',
+          '4.       Untuk j = 1 sampai |V|:',
+          '5.          Jika dist[i][k] + dist[k][j] < dist[i][j]:',
+          '6.             dist[i][j] ← dist[i][k] + dist[k][j]; next[i][j] ← next[i][k]'
+        ]
+      },
+      {
+        id: 'prim',
+        code: 'Prim',
+        name: 'Algoritma Prim (MST)',
+        shortLabel: 'Prim – Minimum Spanning Tree (MST)',
+        category: 'Greedy Minimum Spanning Tree',
+        optimalNote: 'Pohon rentang minimum (MST) tumbuh dari titik awal',
+        timeComplexity: 'O(|E| log |V|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Membangun Minimum Spanning Tree (MST) yang menghubungkan seluruh simpul dengan total bobot minimum, dimulai dengan menumbuhkan pohon dari simpul Start.',
+        pseudocode: [
+          '1. Mulai pohon MST T = {Start}, himpunan sisi E_mst = ∅',
+          '2. Selama |T| < |V|:',
+          '3.    Pilih sisi (u, v) dengan bobot minimum dimana u ∈ T dan v ∉ T',
+          '4.    Tambahkan v ke T dan sisi (u, v) ke E_mst',
+          '5. Ekstrak lintasan unik dari Start ke Goal pada pohon rentang E_mst'
+        ]
+      },
+      {
+        id: 'kruskal',
+        code: 'Kruskal',
+        name: 'Algoritma Kruskal (MST)',
+        shortLabel: 'Kruskal – Minimum Spanning Tree (MST)',
+        category: 'Greedy MST + Union-Find',
+        optimalNote: 'Pohon rentang minimum (MST) via pengurutan sisi global',
+        timeComplexity: 'O(|E| log |E|)',
+        spaceComplexity: 'O(|V|)',
+        description: 'Mengurutkan seluruh sisi graf dari bobot terkecil ke terbesar, lalu memilih sisi yang tidak membentuk siklus menggunakan struktur Disjoint Set (Union-Find).',
+        pseudocode: [
+          '1. Urutkan semua sisi E secara menaik berdasarkan bobot w(u, v)',
+          '2. Buat himpunan saling lepas (Disjoint Set) untuk setiap v ∈ V',
+          '3. Untuk setiap sisi (u, v) terurut:',
+          '4.    Jika Find(u) ≠ Find(v): gabungkan Union(u, v), tambahkan (u, v) ke MST',
+          '5. Berhenti jika jumlah sisi MST = |V| - 1; telusuri jalur Start → Goal'
+        ]
+      }
+    ];
+
+    const MENU_ITEMS = [
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`
+      },
+      {
+        id: 'eksplorasi',
+        label: 'Eksplorasi Graf',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>`
+      },
+      {
+        id: 'algoritma',
+        label: 'Algoritma',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>`
+      },
+      {
+        id: 'bandingkan',
+        label: 'Bandingkan Algoritma',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
+      },
+      {
+        id: 'tugas',
+        label: 'Tugas / Challenge',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`
+      },
+      {
+        id: 'tentang',
+        label: 'Tentang Aplikasi',
+        icon: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+      }
+    ];
+
+    // -----------------------------------------------------------------------
+    // 3. CENTRALIZED REACTIVE APPLICATION STATE (Synchronized Across All Tabs)
+    // -----------------------------------------------------------------------
+    const appState = {
+      activeTab: 'dashboard',
+      startNode: 'A',
+      goalNode: 'G',
+      selectedAlgo: 'dijkstra',
+      weightCriteria: 'distance', // 'distance' | 'time' | 'cost' | 'efficient'
+      viewMode: 'split', // 'split' | 'map' | 'graph'
+      algoDropdownOpen: false,
+      mapZoom: 1,
+      algoStepIndex: 0,
+      autoPlayTimer: null,
+      previewAltRoutePath: null, // Holds array of node IDs when user clicks an alternative route
+      nodes: JSON.parse(JSON.stringify(INITIAL_NODES)),
+      edges: JSON.parse(JSON.stringify(INITIAL_EDGES)),
+      student: {
+        name: 'Farel',
+        nim: '4.33.24.0.12',
+        prodi: 'D4 Teknologi Rekayasa Komputer',
+        campus: 'Politeknik Negeri Semarang'
+      },
+      challengeProgress: {
+        completedTasks: {},
+        quizAnswers: {}
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // 4. GRAPH UTILITY & FORMATTING HELPERS
+    // -----------------------------------------------------------------------
+    function getNodeById(id) {
+      return appState.nodes.find(n => n.id === id) || appState.nodes[0];
+    }
+
+    function getEdgeWeight(edge, criteria = appState.weightCriteria) {
+      if (criteria === 'time') return edge.time;
+      if (criteria === 'cost') return edge.cost;
+      if (criteria === 'efficient') {
+        // Normalized composite efficiency score (distance + time/3 + cost/2500)
+        return Math.round((edge.distance + edge.time / 3 + edge.cost / 2500) * 100) / 100;
+      }
+      return edge.distance;
+    }
+
+    function getAdjacencyList() {
+      const adj = {};
+      appState.nodes.forEach(n => {
+        adj[n.id] = [];
+      });
+      appState.edges.forEach(e => {
+        if (adj[e.from] && adj[e.to]) {
+          adj[e.from].push({ to: e.to, edge: e });
+          adj[e.to].push({ to: e.from, edge: e });
+        }
+      });
+      // Sort neighbors alphabetically for deterministic traversal
+      Object.keys(adj).forEach(k => {
+        adj[k].sort((a, b) => a.to.localeCompare(b.to));
+      });
+      return adj;
+    }
+
+    function formatDecimal(num) {
+      if (typeof num !== 'number' || !isFinite(num)) return '-';
+      return Number.isInteger(num) ? String(num) : num.toFixed(1).replace('.', ',');
+    }
+
+    function formatCurrency(num) {
+      if (typeof num !== 'number' || !isFinite(num)) return '-';
+      return 'Rp' + Math.round(num).toLocaleString('id-ID');
+    }
+
+    function formatWeightDisplay(val, criteria = appState.weightCriteria) {
+      if (criteria === 'time') return `${val} mnt`;
+      if (criteria === 'cost') return `${Math.round(val / 1000)}k`;
+      if (criteria === 'efficient') return `${formatDecimal(val)}`;
+      return `${formatDecimal(val)} km`;
+    }
+
+    function getCriteriaInfo(criteria = appState.weightCriteria) {
+      const map = {
+        distance: { label: 'Jarak (km)', short: 'Jarak', unit: 'km' },
+        time: { label: 'Waktu (menit)', short: 'Waktu', unit: 'menit' },
+        cost: { label: 'Biaya (Rp)', short: 'Biaya', unit: 'Rp' },
+        efficient: { label: 'Paling Efisien (kombinasi)', short: 'Efisiensi', unit: 'poin' }
+      };
+      return map[criteria] || map.distance;
+    }
+
+    function reconstructPath(parent, startId, goalId) {
+      if (startId === goalId) return [startId];
+      const path = [];
+      let curr = goalId;
+      const safetyLimit = appState.nodes.length + 2;
+      let count = 0;
+      while (curr && count < safetyLimit) {
+        path.unshift(curr);
+        if (curr === startId) return path;
+        curr = parent[curr];
+        count++;
+      }
+      return [];
+    }
+
+    function calculatePathMetrics(path) {
+      let distance = 0;
+      let time = 0;
+      let cost = 0;
+      let efficient = 0;
+      const edges = [];
+
+      for (let i = 0; i < path.length - 1; i++) {
+        const u = path[i];
+        const v = path[i + 1];
+        const edge = appState.edges.find(
+          e => (e.from === u && e.to === v) || (e.from === v && e.to === u)
+        );
+        if (edge) {
+          distance += edge.distance;
+          time += edge.time;
+          cost += edge.cost;
+          efficient += getEdgeWeight(edge, 'efficient');
+          edges.push([u, v]);
+        }
+      }
+
+      return {
+        distance: Math.round(distance * 10) / 10,
+        time: Math.round(time),
+        cost: Math.round(cost),
+        efficient: Math.round(efficient * 100) / 100,
+        edges
+      };
+    }
+
+    function findPathInTree(treeEdges, startId, goalId) {
+      const treeAdj = {};
+      treeEdges.forEach(([u, v]) => {
+        if (!treeAdj[u]) treeAdj[u] = [];
+        if (!treeAdj[v]) treeAdj[v] = [];
+        treeAdj[u].push(v);
+        treeAdj[v].push(u);
+      });
+      const queue = [startId];
+      const visited = new Set([startId]);
+      const parent = {};
+      while (queue.length > 0) {
+        const u = queue.shift();
+        if (u === goalId) return reconstructPath(parent, startId, goalId);
+        (treeAdj[u] || []).forEach(v => {
+          if (!visited.has(v)) {
+            visited.add(v);
+            parent[v] = u;
+            queue.push(v);
+          }
+        });
+      }
+      return [];
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. ALL 7 GRAPH ALGORITHMS ENGINE + ALL SIMPLE PATHS ENUMERATION
+    // -----------------------------------------------------------------------
+    function runAlgorithm(algoId, startId = appState.startNode, goalId = appState.goalNode, criteria = appState.weightCriteria) {
+      const meta = ALGORITHMS_META.find(a => a.id === algoId) || ALGORITHMS_META[2];
+      const adj = getAdjacencyList();
+      const steps = [];
+      let path = [];
+      let visitedCount = 0;
+      let highlightedEdges = [];
+      let matrix = null;
+      let summaryNote = meta.optimalNote;
+
+      // 1. BFS (Breadth-First Search)
+      if (algoId === 'bfs') {
+        const queue = [startId];
+        const visited = new Set([startId]);
+        const parent = {};
+        let stepNum = 1;
+
+        while (queue.length > 0) {
+          const u = queue.shift();
+          visitedCount++;
+          const isGoal = u === goalId;
+
+          if (isGoal) {
+            path = reconstructPath(parent, startId, goalId);
+            steps.push({
+              step: stepNum++,
+              focus: `${u} (tujuan)`,
+              detail: `Rute minimum sisi ditemukan: ${path.join(' → ')}`,
+              isGoal: true
+            });
+            break;
+          }
+
+          const newlyQueued = [];
+          (adj[u] || []).forEach(({ to }) => {
+            if (!visited.has(to)) {
+              visited.add(to);
+              parent[to] = u;
+              queue.push(to);
+              newlyQueued.push(to);
+            }
+          });
+
+          steps.push({
+            step: stepNum++,
+            focus: u,
+            detail: `Antrean: [${queue.join(', ') || 'kosong'}] | Baru dikunjungi: ${newlyQueued.join(', ') || '-'}`,
+            isGoal: false
+          });
+        }
+        const m = calculatePathMetrics(path);
+        highlightedEdges = m.edges;
+        summaryNote = `Jumlah sisi minimum (${Math.max(0, path.length - 1)} sisi)`;
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, summaryNote
+        };
+      }
+
+      // 2. DFS (Depth-First Search)
+      if (algoId === 'dfs') {
+        const stack = [[startId, null]];
+        const visited = new Set();
+        const parent = {};
+        let stepNum = 1;
+
+        while (stack.length > 0) {
+          const [u, fromNode] = stack.pop();
+          if (visited.has(u)) continue;
+          visited.add(u);
+          if (fromNode !== null) parent[u] = fromNode;
+          visitedCount++;
+
+          if (u === goalId) {
+            path = reconstructPath(parent, startId, goalId);
+            steps.push({
+              step: stepNum++,
+              focus: `${u} (tujuan)`,
+              detail: `Rute ditemukan via penelusuran dalam: ${path.join(' → ')}`,
+              isGoal: true
+            });
+            break;
+          }
+
+          const neighbors = [...(adj[u] || [])].reverse();
+          const pushed = [];
+          neighbors.forEach(({ to }) => {
+            if (!visited.has(to)) {
+              stack.push([to, u]);
+              pushed.push(to);
+            }
+          });
+
+          steps.push({
+            step: stepNum++,
+            focus: u,
+            detail: `Stack: [${stack.map(x => x[0]).join(', ') || 'kosong'}] | Push: ${pushed.join(', ') || '-'}`,
+            isGoal: false
+          });
+        }
+        const m = calculatePathMetrics(path);
+        highlightedEdges = m.edges;
+        summaryNote = 'Eksplorasi mendalam (bukan rute optimal)';
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, summaryNote
+        };
+      }
+
+      // 3. Dijkstra's Algorithm
+      if (algoId === 'dijkstra') {
+        const dist = {};
+        const parent = {};
+        const unvisited = new Set(appState.nodes.map(n => n.id));
+        appState.nodes.forEach(n => { dist[n.id] = Infinity; });
+        dist[startId] = 0;
+        let stepNum = 1;
+
+        while (unvisited.size > 0) {
+          let u = null;
+          let bestDist = Infinity;
+          unvisited.forEach(id => {
+            if (dist[id] < bestDist) {
+              bestDist = dist[id];
+              u = id;
+            }
+          });
+
+          if (!u || bestDist === Infinity) break;
+          unvisited.delete(u);
+          visitedCount++;
+
+          if (u === goalId) {
+            path = reconstructPath(parent, startId, goalId);
+            steps.push({
+              step: stepNum++,
+              focus: `${u} (tujuan)`,
+              detail: `Rute ditemukan: ${path.join(' → ')}`,
+              isGoal: true
+            });
+            break;
+          }
+
+          (adj[u] || []).forEach(({ to, edge }) => {
+            if (unvisited.has(to)) {
+              const alt = dist[u] + getEdgeWeight(edge, criteria);
+              if (alt < dist[to]) {
+                dist[to] = Math.round(alt * 100) / 100;
+                parent[to] = u;
+              }
+            }
+          });
+
+          const knownSummary = appState.nodes
+            .filter(n => dist[n.id] < Infinity)
+            .map(n => `${n.id}=${formatDecimal(dist[n.id])}`)
+            .join(', ');
+
+          steps.push({
+            step: stepNum++,
+            focus: u,
+            detail: knownSummary,
+            isGoal: false
+          });
+        }
+
+        const m = calculatePathMetrics(path);
+        highlightedEdges = m.edges;
+        summaryNote = `${getCriteriaInfo(criteria).short} terpendek (optimal)`;
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, summaryNote
+        };
+      }
+
+      // 4. A* (A-Star Heuristic Search)
+      if (algoId === 'astar') {
+        const goalObj = getNodeById(goalId);
+        // Heuristik ADMISSIBLE: jarak garis lurus x rasio (bobot/jarak) terkecil di seluruh sisi.
+        // Dengan skala ini h(n) tidak pernah melebihi bobot sebenarnya, sehingga A* dijamin optimal.
+        let minRatio = Infinity;
+        appState.edges.forEach(e => {
+          const a = getNodeById(e.from);
+          const b = getNodeById(e.to);
+          const px = Math.hypot(a.mapX - b.mapX, a.mapY - b.mapY);
+          if (px > 0) minRatio = Math.min(minRatio, getEdgeWeight(e, criteria) / px);
+        });
+        if (!isFinite(minRatio)) minRatio = 0;
+        const heuristic = (nodeId) => {
+          const nObj = getNodeById(nodeId);
+          const pixelDist = Math.hypot(nObj.mapX - goalObj.mapX, nObj.mapY - goalObj.mapY);
+          return Math.floor(pixelDist * minRatio * 100) / 100;
+        };
+
+        const openSet = new Set([startId]);
+        const closedSet = new Set();
+        const gScore = {};
+        const fScore = {};
+        const parent = {};
+        appState.nodes.forEach(n => {
+          gScore[n.id] = Infinity;
+          fScore[n.id] = Infinity;
+        });
+        gScore[startId] = 0;
+        fScore[startId] = heuristic(startId);
+        let stepNum = 1;
+
+        while (openSet.size > 0) {
+          let u = null;
+          let bestF = Infinity;
+          openSet.forEach(id => {
+            if (fScore[id] < bestF) {
+              bestF = fScore[id];
+              u = id;
+            }
+          });
+
+          if (!u) break;
+          openSet.delete(u);
+          closedSet.add(u);
+          visitedCount++;
+
+          if (u === goalId) {
+            path = reconstructPath(parent, startId, goalId);
+            steps.push({
+              step: stepNum++,
+              focus: `${u} (tujuan)`,
+              detail: `Rute optimal heuristik: ${path.join(' → ')}`,
+              isGoal: true
+            });
+            break;
+          }
+
+          (adj[u] || []).forEach(({ to, edge }) => {
+            const tentativeG = Math.round((gScore[u] + getEdgeWeight(edge, criteria)) * 100) / 100;
+            if (tentativeG < gScore[to]) {
+              parent[to] = u;
+              closedSet.delete(to);
+              gScore[to] = tentativeG;
+              fScore[to] = Math.round((tentativeG + heuristic(to)) * 100) / 100;
+              openSet.add(to);
+            }
+          });
+
+          steps.push({
+            step: stepNum++,
+            focus: u,
+            detail: `g(${u})=${formatDecimal(gScore[u])}, h(${u})=${formatDecimal(heuristic(u))}, f(${u})=${formatDecimal(fScore[u])}`,
+            isGoal: false
+          });
+        }
+
+        const m = calculatePathMetrics(path);
+        highlightedEdges = m.edges;
+        summaryNote = 'Rute optimal dengan heuristik (lebih efisien)';
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, summaryNote
+        };
+      }
+
+      // 5. Floyd-Warshall (All-Pairs Shortest Paths)
+      if (algoId === 'floyd') {
+        const nodeIds = appState.nodes.map(n => n.id);
+        const nCount = nodeIds.length;
+        const idxMap = {};
+        nodeIds.forEach((id, idx) => { idxMap[id] = idx; });
+
+        const dist = Array.from({ length: nCount }, (_, i) =>
+          Array.from({ length: nCount }, (__, j) => (i === j ? 0 : Infinity))
+        );
+        const next = Array.from({ length: nCount }, () => Array(nCount).fill(null));
+
+        appState.edges.forEach(e => {
+          const i = idxMap[e.from];
+          const j = idxMap[e.to];
+          const w = getEdgeWeight(e, criteria);
+          if (i !== undefined && j !== undefined && w < dist[i][j]) {
+            dist[i][j] = w;
+            dist[j][i] = w;
+            next[i][j] = j;
+            next[j][i] = i;
+          }
+        });
+
+        let stepNum = 1;
+        for (let k = 0; k < nCount; k++) {
+          let relaxedCount = 0;
+          for (let i = 0; i < nCount; i++) {
+            for (let j = 0; j < nCount; j++) {
+              if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                dist[i][j] = Math.round((dist[i][k] + dist[k][j]) * 100) / 100;
+                next[i][j] = next[i][k];
+                relaxedCount++;
+              }
+            }
+          }
+          steps.push({
+            step: stepNum++,
+            focus: `Pivot k=${nodeIds[k]}`,
+            detail: `Relaksasi ${relaxedCount} pasangan | d(${startId},${goalId}) = ${formatDecimal(dist[idxMap[startId]][idxMap[goalId]])}`,
+            isGoal: false
+          });
+        }
+
+        // Reconstruct path from startId to goalId
+        const sIdx = idxMap[startId];
+        const gIdx = idxMap[goalId];
+        if (sIdx === gIdx) {
+          path = [startId];
+        } else if (next[sIdx][gIdx] !== null) {
+          let curr = sIdx;
+          path = [nodeIds[curr]];
+          while (curr !== gIdx && path.length <= nCount + 1) {
+            curr = next[curr][gIdx];
+            path.push(nodeIds[curr]);
+          }
+        }
+
+        steps.push({
+          step: stepNum,
+          focus: `${goalId} (tujuan)`,
+          detail: `Matriks All-Pairs selesai: ${path.join(' → ')}`,
+          isGoal: true
+        });
+
+        matrix = dist;
+        visitedCount = nCount;
+        const m = calculatePathMetrics(path);
+        highlightedEdges = m.edges;
+        summaryNote = 'Optimal semua pasangan titik (All-Pairs DP)';
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, matrix, summaryNote
+        };
+      }
+
+      // 6. Prim's Minimum Spanning Tree (MST)
+      if (algoId === 'prim') {
+        const inTree = new Set([startId]);
+        const mstEdges = [];
+        let totalMstWeight = 0;
+        let stepNum = 1;
+
+        while (inTree.size < appState.nodes.length) {
+          let bestEdge = null;
+          let bestW = Infinity;
+          let fromNode = null;
+          let toNode = null;
+
+          appState.edges.forEach(e => {
+            const uIn = inTree.has(e.from);
+            const vIn = inTree.has(e.to);
+            if (uIn !== vIn) {
+              const w = getEdgeWeight(e, criteria);
+              if (w < bestW) {
+                bestW = w;
+                bestEdge = e;
+                fromNode = uIn ? e.from : e.to;
+                toNode = uIn ? e.to : e.from;
+              }
+            }
+          });
+
+          if (!bestEdge) break;
+          inTree.add(toNode);
+          mstEdges.push([fromNode, toNode]);
+          totalMstWeight = Math.round((totalMstWeight + bestW) * 100) / 100;
+
+          steps.push({
+            step: stepNum++,
+            focus: `${fromNode}–${toNode}`,
+            detail: `Tambah simpul ${toNode} ke MST (bobot ${formatDecimal(bestW)}) | Total MST = ${formatDecimal(totalMstWeight)}`,
+            isGoal: false
+          });
+        }
+
+        path = findPathInTree(mstEdges, startId, goalId);
+        steps.push({
+          step: stepNum,
+          focus: `${goalId} (MST)`,
+          detail: `Lintasan pada pohon MST: ${path.join(' → ')}`,
+          isGoal: true
+        });
+
+        const m = calculatePathMetrics(path);
+        highlightedEdges = mstEdges;
+        visitedCount = inTree.size;
+        summaryNote = `Pohon Rentang Minimum (Total MST: ${formatDecimal(totalMstWeight)})`;
+        return {
+          algoId, meta, found: path.length > 0, path,
+          metrics: m, edgeCount: Math.max(0, path.length - 1),
+          visitedCount, steps, highlightedEdges, summaryNote
+        };
+      }
+
+      // 7. Kruskal's Minimum Spanning Tree (MST)
+      const parentSet = {};
+      appState.nodes.forEach(n => { parentSet[n.id] = n.id; });
+      const findSet = (x) => (parentSet[x] === x ? x : (parentSet[x] = findSet(parentSet[x])));
+      const unionSet = (a, b) => {
+        const ra = findSet(a);
+        const rb = findSet(b);
+        if (ra !== rb) {
+          parentSet[rb] = ra;
+          return true;
+        }
+        return false;
+      };
+
+      const sortedEdges = [...appState.edges].sort(
+        (a, b) => getEdgeWeight(a, criteria) - getEdgeWeight(b, criteria)
+      );
+      const mstEdges = [];
+      let totalMstWeight = 0;
+      let stepNum = 1;
+
+      sortedEdges.forEach(e => {
+        if (mstEdges.length >= appState.nodes.length - 1) return;
+        const w = getEdgeWeight(e, criteria);
+        if (unionSet(e.from, e.to)) {
+          mstEdges.push([e.from, e.to]);
+          totalMstWeight = Math.round((totalMstWeight + w) * 100) / 100;
+          steps.push({
+            step: stepNum++,
+            focus: `${e.from}–${e.to}`,
+            detail: `Sisi diterima ke MST (bobot ${formatDecimal(w)}) | Total MST = ${formatDecimal(totalMstWeight)}`,
+            isGoal: false
+          });
+        }
+      });
+
+      path = findPathInTree(mstEdges, startId, goalId);
+      steps.push({
+        step: stepNum,
+        focus: `${goalId} (MST)`,
+        detail: `Lintasan pada MST Kruskal: ${path.join(' → ')}`,
+        isGoal: true
+      });
+
+      const m = calculatePathMetrics(path);
+      highlightedEdges = mstEdges;
+      visitedCount = appState.nodes.length;
+      summaryNote = `MST Kruskal (${mstEdges.length} sisi, total ${formatDecimal(totalMstWeight)})`;
+      return {
+        algoId: 'kruskal', meta, found: path.length > 0, path,
+        metrics: m, edgeCount: Math.max(0, path.length - 1),
+        visitedCount, steps, highlightedEdges, summaryNote
+      };
+    }
+
+    // Enumerate ALL possible simple paths (lintasan sederhana tanpa siklus) between Start & Goal
+    function findAllSimplePaths(startId, goalId, criteria = appState.weightCriteria, maxPaths = 40) {
+      if (startId === goalId) {
+        return [{
+          rank: 1,
+          path: [startId],
+          highlightedEdges: [],
+          metrics: { distance: 0, time: 0, cost: 0, efficient: 0, edges: [] },
+          edgeCount: 0,
+          sortWeight: 0
+        }];
+      }
+
+      const adj = getAdjacencyList();
+      const allFound = [];
+      const visited = new Set([startId]);
+      const currentPath = [startId];
+
+      const ENUM_LIMIT = 20000; // pengaman untuk graf besar
+      function dfsBacktrack(u) {
+        if (allFound.length >= ENUM_LIMIT) return;
+        if (u === goalId) {
+          const pathCopy = [...currentPath];
+          const metrics = calculatePathMetrics(pathCopy);
+          const sortWeight = criteria === 'time'
+            ? metrics.time
+            : criteria === 'cost'
+            ? metrics.cost
+            : criteria === 'efficient'
+            ? metrics.efficient
+            : metrics.distance;
+
+          allFound.push({
+            path: pathCopy,
+            highlightedEdges: metrics.edges,
+            metrics,
+            edgeCount: Math.max(0, pathCopy.length - 1),
+            sortWeight
+          });
+          return;
+        }
+
+        const neighbors = adj[u] || [];
+        for (const { to } of neighbors) {
+          if (!visited.has(to)) {
+            visited.add(to);
+            currentPath.push(to);
+            dfsBacktrack(to);
+            currentPath.pop();
+            visited.delete(to);
+          }
+        }
+      }
+
+      dfsBacktrack(startId);
+
+      // Sort all simple paths from most optimal to highest weight according to active criteria
+      allFound.sort((a, b) => a.sortWeight - b.sortWeight || a.edgeCount - b.edgeCount);
+
+      return allFound.slice(0, maxPaths).map((item, idx) => ({
+        ...item,
+        rank: idx + 1
+      }));
+    }
+
+    // Return all distinct alternative routes (sorted from best to longest)
+    function getAlternativeRoutes(startId, goalId, criteria) {
+      return findAllSimplePaths(startId, goalId, criteria, 40);
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. STATE MUTATORS & SYNCHRONIZATION CONTROLLERS
+    // -----------------------------------------------------------------------
+    function setActiveTab(tabId) {
+      stopAutoPlay();
+      appState.activeTab = tabId;
+      toggleMobileSidebar(false);
+      renderApp();
+    }
+
+    function updateSimulationParams({ startNode, goalNode, selectedAlgo, weightCriteria, viewMode }) {
+      stopAutoPlay();
+      if (startNode !== undefined) appState.startNode = startNode;
+      if (goalNode !== undefined) appState.goalNode = goalNode;
+      if (selectedAlgo !== undefined) {
+        appState.selectedAlgo = selectedAlgo;
+        appState.algoDropdownOpen = false;
+      }
+      if (weightCriteria !== undefined) appState.weightCriteria = weightCriteria;
+      if (viewMode !== undefined) appState.viewMode = viewMode;
+      appState.previewAltRoutePath = null;
+      appState.algoStepIndex = 0;
+      renderApp();
+    }
+
+    function selectAlternativeRoute(pathJson) {
+      if (!pathJson) {
+        appState.previewAltRoutePath = null;
+        showToast('Kembali menampilkan rute utama algoritma aktif.', 'info');
+      } else {
+        const parsed = JSON.parse(decodeURIComponent(pathJson));
+        appState.previewAltRoutePath = parsed;
+        showToast(`Menyorot rute alternatif: ${parsed.join(' → ')}`, 'info');
+      }
+      renderApp();
+    }
+
+    function toggleAlgoDropdown() {
+      appState.algoDropdownOpen = !appState.algoDropdownOpen;
+      renderApp();
+    }
+
+    function adjustMapZoom(delta) {
+      appState.mapZoom = Math.min(1.45, Math.max(0.85, Math.round((appState.mapZoom + delta) * 100) / 100));
+      renderApp();
+    }
+
+    function toggleMobileSidebar(forceState) {
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (!sidebar || !backdrop) return;
+      const shouldOpen = typeof forceState === 'boolean'
+        ? forceState
+        : sidebar.classList.contains('-translate-x-full');
+
+      if (shouldOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const bgStyle = type === 'error'
+        ? 'bg-rose-600 text-white'
+        : type === 'info'
+        ? 'bg-brand-800 text-white'
+        : 'bg-emerald-600 text-white';
+
+      toast.className = `${bgStyle} px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-300 pointer-events-auto`;
+      toast.innerHTML = `<span>${type === 'error' ? '⚠️' : type === 'info' ? 'ℹ️' : '✅'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 2800);
+    }
+
+    function triggerPrintPDF(customSubtitle) {
+      const tabLabelMap = {
+        dashboard: 'Tab 1: Dashboard Simulasi Rute & Perbandingan',
+        eksplorasi: 'Tab 2: Eksplorasi Struktur Graf & Matriks Ketetanggaan',
+        algoritma: 'Tab 3: Bedah Detail & Simulasi Langkah Algoritma',
+        bandingkan: 'Tab 4: Benchmark & Komparasi 7 Algoritma Graf',
+        tugas: 'Tab 5: Lembar Tugas Praktikum & Kuis Evaluasi',
+        tentang: 'Tab 6: Dokumentasi Aplikasi & Identitas Mahasiswa'
+      };
+
+      const startObj = getNodeById(appState.startNode);
+      const goalObj = getNodeById(appState.goalNode);
+      const algoMeta = ALGORITHMS_META.find(a => a.id === appState.selectedAlgo);
+      const critInfo = getCriteriaInfo(appState.weightCriteria);
+
+      document.getElementById('print-tab-subtitle').textContent = customSubtitle || tabLabelMap[appState.activeTab] || 'Laporan Praktikum';
+      document.getElementById('print-student-name').textContent = appState.student.name;
+      document.getElementById('print-student-nim').textContent = appState.student.nim;
+      document.getElementById('print-student-prodi').textContent = `${appState.student.prodi} – ${appState.student.campus}`;
+      document.getElementById('print-active-params').textContent = `${startObj.shortName} (${startObj.id}) → ${goalObj.shortName} (${goalObj.id}) | ${algoMeta.code} | ${critInfo.label}`;
+      document.getElementById('print-timestamp').textContent = 'Dicetak pada: ' + new Date().toLocaleString('id-ID');
+
+      setTimeout(() => {
+        window.print();
+      }, 80);
+    }
+
+    // Synchronized Top Control Strip for Non-Dashboard Tabs
+    function renderSyncedControlStrip(title, subtitle) {
+      return `
+        <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">${title}</h2>
+              <p class="text-xs sm:text-sm text-slate-500 mt-0.5">${subtitle}</p>
+            </div>
+            <button onclick="triggerPrintPDF()" type="button" class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs sm:text-sm transition no-print">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>Print PDF Tab Ini</span>
+            </button>
+          </div>
+
+          <!-- Live Synchronized Parameter Bar -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2.5 border-t border-slate-100 no-print">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Titik Awal (Start)</label>
+              <select onchange="updateSimulationParams({ startNode: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">
+                ${appState.nodes.map(n => `<option value="${n.id}" ${n.id === appState.startNode ? 'selected' : ''}>${n.id} – ${n.shortName}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Tujuan (Goal)</label>
+              <select onchange="updateSimulationParams({ goalNode: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">
+                ${appState.nodes.map(n => `<option value="${n.id}" ${n.id === appState.goalNode ? 'selected' : ''}>${n.id} – ${n.shortName}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Algoritma Aktif (7 Pilihan)</label>
+              <select onchange="updateSimulationParams({ selectedAlgo: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-900">
+                ${ALGORITHMS_META.map(a => `<option value="${a.id}" ${a.id === appState.selectedAlgo ? 'selected' : ''}>${a.shortLabel}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-500 mb-1">Kriteria Bobot</label>
+              <select onchange="updateSimulationParams({ weightCriteria: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">
+                <option value="distance" ${appState.weightCriteria === 'distance' ? 'selected' : ''}>Jarak (km)</option>
+                <option value="time" ${appState.weightCriteria === 'time' ? 'selected' : ''}>Waktu (menit)</option>
+                <option value="cost" ${appState.weightCriteria === 'cost' ? 'selected' : ''}>Biaya (Rp)</option>
+                <option value="efficient" ${appState.weightCriteria === 'efficient' ? 'selected' : ''}>Paling Efisien (kombinasi)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // -----------------------------------------------------------------------
+    // 7. VISUAL COMPONENTS: SEMARANG ROUTE MAP & ABSTRACT GRAPH SVG
+    // -----------------------------------------------------------------------
+    function renderSemarangMapSVG(activeResult, altRoutes) {
+      const startObj = getNodeById(appState.startNode);
+      const goalObj = getNodeById(appState.goalNode);
+
+      const previewMetrics = appState.previewAltRoutePath
+        ? calculatePathMetrics(appState.previewAltRoutePath)
+        : null;
+      const primaryEdges = previewMetrics ? previewMetrics.edges : activeResult.highlightedEdges;
+      const primaryPath = appState.previewAltRoutePath || activeResult.path;
+      const primarySig = primaryPath.join('-');
+
+      const highlightedSet = new Set(
+        primaryEdges.map(([u, v]) => [u, v].sort().join('-'))
+      );
+
+      // Filter alternative routes distinct from currently highlighted primary route (show up to 4 overlays on map)
+      const secondaryRoutes = altRoutes
+        .filter(r => r.path.join('-') !== primarySig)
+        .slice(0, 4);
+
+      const altPalette = [
+        { stroke: '#f59e0b', badgeBg: '#f59e0b', badgeSub: '#fef3c7', dyOffset: -26 },
+        { stroke: '#16a34a', badgeBg: '#16a34a', badgeSub: '#dcfce7', dyOffset: 24 },
+        { stroke: '#9333ea', badgeBg: '#9333ea', badgeSub: '#f3e8ff', dyOffset: -46 },
+        { stroke: '#0891b2', badgeBg: '#0891b2', badgeSub: '#cffafe', dyOffset: 44 }
+      ];
+
+      const secondaryEdgeSets = secondaryRoutes.map(r =>
+        new Set(r.highlightedEdges.map(([u, v]) => [u, v].sort().join('-')))
+      );
+
+      const scale = appState.mapZoom;
+
+      const getPathMidpoint = (pathArr) => {
+        if (!pathArr || pathArr.length === 0) return { x: 240, y: 140 };
+        const midNode = getNodeById(pathArr[Math.floor(pathArr.length / 2)]);
+        return { x: midNode.mapX, y: midNode.mapY };
+      };
+
+      const primaryMid = getPathMidpoint(primaryPath);
+      const primaryDisplayMetrics = previewMetrics || activeResult.metrics;
+
+      return `
+        <div data-panzoom="map" class="relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-[#f6f4ee] select-none cursor-grab active:cursor-grabbing">
+          <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
+            <g class="pz-layer" transform="translate(${appState.pz.map.x} ${appState.pz.map.y}) scale(${appState.pz.map.k})">
+            <rect width="440" height="520" fill="#f7f5ef"/>
+            <rect width="440" height="22" fill="#cbe7f8"/>
+            <text x="8" y="14" font-size="9" font-weight="600" fill="#5b8db3">Laut Jawa (utara)</text>
+            <text x="8" y="512" font-size="8.5" fill="#94a3b8">Posisi dari koordinat nyata · skala seragam · Utara ↑</text>
+
+            <!-- All Graph Roads (Base Layer) -->
+            ${appState.edges.map(e => {
+              const u = getNodeById(e.from);
+              const v = getNodeById(e.to);
+              const key = [e.from, e.to].sort().join('-');
+              const isPrimary = highlightedSet.has(key);
+
+              let stroke = '#cbd5e1';
+              let width = 3.2;
+              let extraClass = '';
+              if (isPrimary) {
+                stroke = '#2563eb';
+                width = 5.5;
+                extraClass = 'route-flow';
+              } else {
+                const secIdx = secondaryEdgeSets.findIndex(s => s.has(key));
+                if (secIdx !== -1) {
+                  stroke = altPalette[secIdx].stroke;
+                  width = 3.6;
+                }
+              }
+              return `
+                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#ffffff" stroke-width="${width + 2.5}" stroke-linecap="round"/>
+                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" class="${extraClass}"/>
+              `;
+            }).join('')}
+
+            <!-- Map Nodes -->
+            ${appState.nodes.map(n => {
+              if (n.id === appState.startNode || n.id === appState.goalNode) return '';
+              return `
+                <circle cx="${n.mapX}" cy="${n.mapY}" r="5.5" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+                <text x="${n.side === 'l' ? n.mapX - 9 : n.mapX + 9}" y="${n.mapY + 3}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="9.5" font-weight="600" fill="#475569">${n.shortName}</text>
+              `;
+            }).join('')}
+
+            
+
+            <!-- Primary Route Callout Pill -->
+            ${primaryPath.length > 1 ? `
+              <g transform="translate(${Math.min(300, Math.max(8, primaryMid.x + 14))}, ${Math.min(480, Math.max(28, primaryMid.y - 44))})">
+                <rect x="0" y="0" width="132" height="36" rx="8" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+                <text x="66" y="14" text-anchor="middle" font-size="9.5" font-weight="700" fill="#ffffff">${appState.previewAltRoutePath ? 'Rute Pilihan' : `Rute Utama (${activeResult.meta.code})`}</text>
+                <text x="66" y="28" text-anchor="middle" font-size="9.5" font-weight="600" fill="#dbeafe">${formatDecimal(primaryDisplayMetrics.distance)} km • ${primaryDisplayMetrics.time} mnt</text>
+              </g>
+            ` : ''}
+
+            <!-- Top Alternative Routes Callout Pills -->
+            ${secondaryRoutes.slice(0, 2).map((altR, idx) => {
+              const pal = altPalette[idx];
+              const mid = getPathMidpoint(altR.path);
+              const bx = Math.min(310, Math.max(6, mid.x - 62 + (idx === 0 ? -60 : 60)));
+              const by = Math.min(480, Math.max(28, mid.y + pal.dyOffset));
+              return `
+                <g transform="translate(${bx}, ${by})">
+                  <rect x="0" y="0" width="124" height="33" rx="8" fill="${pal.badgeBg}" stroke="#ffffff" stroke-width="1.4"/>
+                  <text x="62" y="13" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">Alternatif #${altR.rank}</text>
+                  <text x="62" y="25" text-anchor="middle" font-size="9" font-weight="600" fill="${pal.badgeSub}">${formatDecimal(altR.metrics.distance)} km • ${altR.metrics.time} mnt</text>
+                </g>
+              `;
+            }).join('')}
+
+            <!-- Start Pin Marker -->
+            <g transform="translate(${startObj.mapX}, ${startObj.mapY})">
+              <circle cx="0" cy="0" r="6" fill="#2563eb" opacity="0.25"/>
+              <path d="M0 -24 C-6.5 -24 -11.5 -19 -11.5 -12.5 C-11.5 -4.5 0 4 0 4 C0 4 11.5 -4.5 11.5 -12.5 C11.5 -19 6.5 -24 0 -24 Z" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="0" cy="-13" r="4" fill="#ffffff"/>
+              <rect x="-24" y="6" width="52" height="16" rx="4" fill="#ffffff" opacity="0.9"/>
+              <text x="2" y="17" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1e3a8a">${startObj.shortName}</text>
+            </g>
+
+            <!-- Goal Pin Marker -->
+            <g transform="translate(${goalObj.mapX}, ${goalObj.mapY})">
+              <circle cx="0" cy="0" r="6" fill="#ef4444" opacity="0.25"/>
+              <path d="M0 -24 C-6.5 -24 -11.5 -19 -11.5 -12.5 C-11.5 -4.5 0 4 0 4 C0 4 11.5 -4.5 11.5 -12.5 C11.5 -19 6.5 -24 0 -24 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="0" cy="-13" r="4" fill="#ffffff"/>
+              <rect x="13" y="-18" width="76" height="17" rx="4" fill="#ffffff" opacity="0.92"/>
+              <text x="51" y="-6" text-anchor="middle" font-size="10.5" font-weight="800" fill="#991b1b">${goalObj.shortName}</text>
+            </g>
+          </g>
+          </svg>
+
+          ${renderPanZoomControls('map')}
+        </div>
+      `;
+    }
+
+    function renderAbstractGraphSVG(activeResult, interactive = false) {
+      const previewMetrics = appState.previewAltRoutePath
+        ? calculatePathMetrics(appState.previewAltRoutePath)
+        : null;
+      const activeEdges = previewMetrics ? previewMetrics.edges : activeResult.highlightedEdges;
+      const activePath = appState.previewAltRoutePath || activeResult.path || [];
+
+      const highlightedSet = new Set(
+        activeEdges.map(([u, v]) => [u, v].sort().join('-'))
+      );
+      const pathNodeSet = new Set(activePath);
+
+      return `
+        <div data-panzoom="graph" class="relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center select-none cursor-grab active:cursor-grabbing">
+          <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
+            <defs>
+              <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+            <g class="pz-layer" transform="translate(${appState.pz.graph.x} ${appState.pz.graph.y}) scale(${appState.pz.graph.k})">
+
+            <!-- Edges with Weight Labels -->
+            ${appState.edges.map(e => {
+              const u = getNodeById(e.from);
+              const v = getNodeById(e.to);
+              const key = [e.from, e.to].sort().join('-');
+              const isActive = highlightedSet.has(key);
+              const midX = (u.graphX + v.graphX) / 2;
+              const midY = (u.graphY + v.graphY) / 2;
+
+              const dx = v.graphX - u.graphX;
+              const dy = v.graphY - u.graphY;
+              const len = Math.hypot(dx, dy) || 1;
+              const normX = -dy / len;
+              const normY = dx / len;
+              const labelX = midX + normX * 11;
+              const labelY = midY + normY * 11;
+
+              const weightText = formatWeightDisplay(getEdgeWeight(e, appState.weightCriteria), appState.weightCriteria);
+
+              return `
+                <g>
+                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}"
+                        stroke="${isActive ? '#2563eb' : '#64748b'}"
+                        stroke-width="${isActive ? 3.8 : 1.7}"
+                        ${isActive ? 'filter="url(#glow-blue)"' : ''}/>
+                  <rect x="${labelX - 21}" y="${labelY - 8}" width="42" height="15" rx="4" fill="#ffffff" opacity="0.92"/>
+                  <text x="${labelX}" y="${labelY + 3}" text-anchor="middle" font-size="9.5"
+                        font-weight="${isActive ? '800' : '600'}"
+                        fill="${isActive ? '#1d4ed8' : '#334155'}">${weightText}</text>
+                </g>
+              `;
+            }).join('')}
+
+            <!-- Vertices (Nodes) -->
+            ${appState.nodes.map(n => {
+              const isStart = n.id === appState.startNode;
+              const isGoal = n.id === appState.goalNode;
+              const isOnPath = pathNodeSet.has(n.id);
+
+              let fill = '#dbeafe';
+              let stroke = '#2563eb';
+              let textColor = '#1e3a8a';
+
+              if (isStart) {
+                fill = '#2563eb';
+                stroke = '#1d4ed8';
+                textColor = '#ffffff';
+              } else if (isGoal) {
+                fill = '#ef4444';
+                stroke = '#b91c1c';
+                textColor = '#ffffff';
+              } else if (isOnPath) {
+                fill = '#bfdbfe';
+                stroke = '#1d4ed8';
+                textColor = '#1e3a8a';
+              }
+
+              return `
+                <g class="cursor-pointer transition-transform" onclick="handleGraphNodeClick('${n.id}')">
+                  <circle cx="${n.graphX}" cy="${n.graphY}" r="11" fill="${fill}" stroke="${stroke}" stroke-width="${isStart || isGoal ? 3 : 2}"/>
+                  <text x="${n.graphX}" y="${n.graphY + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="${textColor}">${n.id}</text>
+                  <text x="${n.side === 'l' ? n.graphX - 15 : n.graphX + 15}" y="${n.graphY + 3.5}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="9" font-weight="700" fill="#334155">${n.shortName}</text>
+                </g>
+              `;
+            }).join('')}
+            </g>
+          </svg>
+          ${renderPanZoomControls('graph')}
+        </div>
+      `;
+    }
+
+    function handleGraphNodeClick(nodeId) {
+      if (nodeId !== appState.startNode && nodeId !== appState.goalNode) {
+        updateSimulationParams({ goalNode: nodeId });
+        showToast(`Tujuan diubah ke ${getNodeById(nodeId).shortName} (${nodeId})`, 'info');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. TAB 1: DASHBOARD VIEW
+    // -----------------------------------------------------------------------
+    function renderDashboard() {
+      const activeResult = runAlgorithm(appState.selectedAlgo, appState.startNode, appState.goalNode, appState.weightCriteria);
+      const altRoutes = getAlternativeRoutes(appState.startNode, appState.goalNode, appState.weightCriteria);
+      const selectedAlgoMeta = ALGORITHMS_META.find(a => a.id === appState.selectedAlgo);
+      const startObj = getNodeById(appState.startNode);
+      const goalObj = getNodeById(appState.goalNode);
+
+      const displayedPath = appState.previewAltRoutePath || activeResult.path;
+      const displayedMetrics = appState.previewAltRoutePath
+        ? calculatePathMetrics(appState.previewAltRoutePath)
+        : activeResult.metrics;
+      const displayedEdgeCount = appState.previewAltRoutePath
+        ? Math.max(0, appState.previewAltRoutePath.length - 1)
+        : activeResult.edgeCount;
+
+      const dashboardCompareIds = ['bfs', 'dfs', 'dijkstra', 'astar'];
+      if (!dashboardCompareIds.includes(appState.selectedAlgo)) {
+        dashboardCompareIds.push(appState.selectedAlgo);
+      }
+      const comparisonRows = dashboardCompareIds.map(id =>
+        runAlgorithm(id, appState.startNode, appState.goalNode, appState.weightCriteria)
+      );
+
+      const getAlgoBadgeIcon = (id) => {
+        const icons = {
+          bfs: `<svg class="w-4 h-4 text-brand-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/><path stroke-width="1.8" d="M10.8 6.6L7.2 15.4M13.2 6.6l3.6 8.8"/></svg>`,
+          dfs: `<svg class="w-4 h-4 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><path stroke-width="1.8" d="M7.5 6.5l3 4M13.5 13.5l3 4"/></svg>`,
+          dijkstra: `<svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="2.5"/></svg>`,
+          astar: `<svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.8" d="M12 3l2.4 5 5.6.8-4 3.9.9 5.5L12 15.6l-4.9 2.6.9-5.5-4-3.9 5.6-.8L12 3z"/></svg>`,
+          floyd: `<svg class="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-width="1.8"/><path stroke-width="1.8" d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg>`,
+          prim: `<svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path stroke-width="1.8" d="M10.5 8L7.5 15.8M13.5 8l3 7.8M8.5 18h7"/></svg>`,
+          kruskal: `<svg class="w-4 h-4 text-teal-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path stroke-width="1.8" d="M8.5 6h7M6 8.5v7M8.5 18h7"/></svg>`
+        };
+        return icons[id] || icons.dijkstra;
+      };
+
+      const humanRouteLabels = displayedPath.map((id, idx) => {
+        if (idx === 0) return getNodeById(id).shortName;
+        if (idx === displayedPath.length - 1) return getNodeById(id).shortName;
+        return id;
+      }).join(' → ');
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+          <!-- LEFT PANEL: PENGATURAN RUTE (Col Span 4) -->
+          <section class="lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div class="flex items-center gap-2 text-brand-950 font-bold text-base sm:text-lg">
+                <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center">⚙️</span>
+                <h2>Pengaturan Rute</h2>
+              </div>
+              <button onclick="triggerPrintPDF('Dashboard Utama')" type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition no-print" title="Cetak Dashboard ke PDF">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                <span>PDF</span>
+              </button>
+            </div>
+
+            <!-- Titik Awal (Start) -->
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700">
+                <span class="text-blue-600">📍</span> Titik Awal (Start)
+              </label>
+              <select onchange="updateSimulationParams({ startNode: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                ${appState.nodes.map(n => `
+                  <option value="${n.id}" ${n.id === appState.startNode ? 'selected' : ''}>${n.shortName} (${n.name.split('(')[1] ? n.name.split('(')[1].replace(')', '') : n.area})</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- Tujuan (Goal) -->
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700">
+                <span class="text-rose-600">🎯</span> Tujuan (Goal)
+              </label>
+              <select onchange="updateSimulationParams({ goalNode: this.value })" class="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                ${appState.nodes.map(n => `
+                  <option value="${n.id}" ${n.id === appState.goalNode ? 'selected' : ''}>${n.shortName} (${n.area})</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- Algoritma (7 Pilihan) -->
+            <div class="space-y-1.5 relative">
+              <label class="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-700">
+                <span class="flex items-center gap-1.5"><span class="text-brand-600">🔗</span> Algoritma</span>
+                <span class="text-[11px] font-medium text-brand-600">7 Algoritma Tersedia</span>
+              </label>
+
+              <button type="button" onclick="toggleAlgoDropdown()" class="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white hover:border-brand-500 px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold text-slate-800 shadow-sm transition">
+                <span class="truncate">${selectedAlgoMeta.shortLabel}</span>
+                <svg class="w-4 h-4 text-slate-500 shrink-0 transition-transform ${appState.algoDropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
+                ${ALGORITHMS_META.map(algo => {
+                  const isSelected = algo.id === appState.selectedAlgo;
+                  return `
+                    <button type="button" onclick="updateSimulationParams({ selectedAlgo: '${algo.id}' })"
+                            class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition ${isSelected ? 'bg-blue-100/90 text-blue-950 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'}">
+                      <span class="w-4 flex items-center justify-center shrink-0">
+                        ${isSelected ? '<span class="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center">✓</span>' : ''}
+                      </span>
+                      ${getAlgoBadgeIcon(algo.id)}
+                      <span class="truncate">${algo.shortLabel}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Kriteria Bobot -->
+            <div class="space-y-2 pt-1">
+              <label class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700">
+                <span class="text-indigo-600">⚖️</span> Kriteria Bobot
+              </label>
+              <div class="space-y-1.5 pl-1">
+                ${[
+                  { id: 'distance', label: 'Jarak (km)' },
+                  { id: 'time', label: 'Waktu (menit)' },
+                  { id: 'cost', label: 'Biaya (Rp)' },
+                  { id: 'efficient', label: 'Paling Efisien (kombinasi)' }
+                ].map(crit => `
+                  <label class="flex items-center gap-2.5 text-xs sm:text-sm text-slate-700 cursor-pointer py-0.5 hover:text-brand-800">
+                    <input type="radio" name="weightCriteria" value="${crit.id}"
+                           ${appState.weightCriteria === crit.id ? 'checked' : ''}
+                           onchange="updateSimulationParams({ weightCriteria: '${crit.id}' })"
+                           class="w-4 h-4 text-brand-600 focus:ring-brand-500 border-slate-300"/>
+                    <span class="${appState.weightCriteria === crit.id ? 'font-semibold text-slate-900' : ''}">${crit.label}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div class="grid grid-cols-2 gap-2.5 pt-2 no-print">
+              <button type="button" onclick="showToast('Simulasi ${selectedAlgoMeta.code} dijalankan: ${startObj.shortName} → ${goalObj.shortName}')"
+                      class="btn-primary-gradient text-white font-semibold text-xs sm:text-sm py-2.5 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 transition active:scale-95">
+                <span>▶</span>
+                <span>Jalankan</span>
+              </button>
+              <button type="button" onclick="setActiveTab('bandingkan')"
+                      class="bg-white hover:bg-brand-50 text-brand-800 border border-brand-200 font-semibold text-xs sm:text-sm py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95">
+                <span>⇄</span>
+                <span>Bandingkan</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- RIGHT / MAIN PANEL (Col Span 8) -->
+          <div class="lg:col-span-8 space-y-5">
+
+            <!-- TOP VISUALIZATION CARD: PETA RUTE SEMARANG + GRAF ABSTRAKSI -->
+            <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
+              <div class="flex flex-wrap items-center justify-between gap-2 no-print">
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="updateSimulationParams({ viewMode: 'split' })"
+                          class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition ${appState.viewMode === 'split' ? 'btn-primary-gradient text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                    <span>🗺️</span>
+                    <span>Peta Rute (Kota Semarang)</span>
+                  </button>
+                  <button type="button" onclick="updateSimulationParams({ viewMode: 'graph' })"
+                          class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition ${appState.viewMode === 'graph' ? 'btn-primary-gradient text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                    <span>🔗</span>
+                    <span>Graf (Abstraksi)</span>
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs">
+                  <button type="button" onclick="updateSimulationParams({ viewMode: 'map' })"
+                          class="px-2.5 py-1 rounded-lg font-semibold transition ${appState.viewMode === 'map' ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                    🗺️ Peta Nyata
+                  </button>
+                  <button type="button" onclick="updateSimulationParams({ viewMode: 'graph' })"
+                          class="px-2.5 py-1 rounded-lg font-semibold transition ${appState.viewMode === 'graph' ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">
+                    🔗 Graf Saja
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 ${appState.viewMode === 'split' ? 'md:grid-cols-12' : ''} gap-3.5">
+                ${appState.viewMode !== 'graph' ? `
+                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6' : 'col-span-1'}">
+                    ${renderSemarangMapSVG(activeResult, altRoutes)}
+                  </div>
+                ` : ''}
+                ${appState.viewMode !== 'map' ? `
+                  <div class="${appState.viewMode === 'split' ? 'md:col-span-6' : 'col-span-1'}">
+                    ${renderAbstractGraphSVG(activeResult, false)}
+                  </div>
+                ` : ''}
+              </div>
+            </section>
+
+            <!-- ALL POSSIBLE ALTERNATIVE ROUTES EXPLORER (LINTASAN SEDERHANA) -->
+            <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                    <span class="text-amber-500">🧭</span> Semua Kemungkinan Rute Alternatif (Lintasan Sederhana)
+                  </h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-100 text-brand-900">
+                    ${altRoutes.length} Kemungkinan Rute
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 no-print">
+                  ${appState.previewAltRoutePath ? `
+                    <button type="button" onclick="selectAlternativeRoute(null)" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition">
+                      ↺ Kembali ke Rute ${selectedAlgoMeta.code}
+                    </button>
+                  ` : `
+                    <span class="text-[11px] text-slate-500">Klik salah satu rute untuk menyorot di peta</span>
+                  `}
+                </div>
+              </div>
+
+              <div class="overflow-x-auto max-h-[195px] rounded-xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+                    <tr>
+                      <th class="py-2 px-3 w-20">Peringkat</th>
+                      <th class="py-2 px-3">Lintasan Simpul (Start → Goal)</th>
+                      <th class="py-2 px-3 text-center">Jarak</th>
+                      <th class="py-2 px-3 text-center">Waktu</th>
+                      <th class="py-2 px-3 text-right">Biaya</th>
+                      <th class="py-2 px-3 text-center">Sisi</th>
+                      <th class="py-2 px-3 text-center no-print">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${altRoutes.map(alt => {
+                      const sig = alt.path.join('-');
+                      const isCurrentlyDisplayed = displayedPath.join('-') === sig;
+                      const encodedPath = encodeURIComponent(JSON.stringify(alt.path));
+                      return `
+                        <tr onclick="selectAlternativeRoute('${encodedPath}')"
+                            class="cursor-pointer transition ${isCurrentlyDisplayed ? 'bg-blue-50/90 font-bold text-blue-950' : 'hover:bg-slate-50 text-slate-700'}">
+                          <td class="py-2 px-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${alt.rank === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}">
+                              Rute #${alt.rank}
+                            </span>
+                          </td>
+                          <td class="py-2 px-3 font-mono">${alt.path.join(' → ')}</td>
+                          <td class="py-2 px-3 text-center">${formatDecimal(alt.metrics.distance)} km</td>
+                          <td class="py-2 px-3 text-center">${alt.metrics.time} mnt</td>
+                          <td class="py-2 px-3 text-right">${formatCurrency(alt.metrics.cost)}</td>
+                          <td class="py-2 px-3 text-center">${alt.edgeCount}</td>
+                          <td class="py-2 px-3 text-center no-print">
+                            <span class="text-[11px] font-semibold ${isCurrentlyDisplayed ? 'text-blue-700' : 'text-brand-600 hover:underline'}">
+                              ${isCurrentlyDisplayed ? '● Ditampilkan' : 'Sorot Peta'}
+                            </span>
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- MIDDLE ROW: HASIL PENCARIAN RUTE + PROSES ALGORITMA -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+              <!-- Hasil Pencarian Rute (Col Span 6) -->
+              <section class="md:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between space-y-4">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                      <span class="text-brand-600">🚩</span> Hasil Pencarian Rute
+                    </h3>
+                    <button type="button" onclick="setActiveTab('algoritma')" class="text-xs font-semibold text-brand-600 hover:text-brand-800 no-print">
+                      Detail Langkah →
+                    </button>
+                  </div>
+
+                  ${activeResult.found ? `
+                    <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 flex items-start gap-3">
+                      <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 font-bold shadow-sm mt-0.5">✓</div>
+                      <div class="min-w-0 flex-1 space-y-1.5">
+                        <div class="font-bold text-emerald-950 text-xs sm:text-sm">
+                          ${appState.previewAltRoutePath
+                            ? `Rute Alternatif Pilihan (${displayedPath.join(' → ')})`
+                            : `Rute ${selectedAlgoMeta.code} (${getCriteriaInfo(appState.weightCriteria).short} ${appState.selectedAlgo === 'bfs' ? 'Min Sisi' : appState.selectedAlgo === 'prim' || appState.selectedAlgo === 'kruskal' ? 'via MST' : 'Terpendek'})`}
+                        </div>
+                        <div class="inline-block max-w-full bg-white border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-2xs truncate">
+                          ${humanRouteLabels}
+                        </div>
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs font-semibold text-rose-800">
+                      ⚠️ Rute tidak ditemukan antara ${startObj.shortName} dan ${goalObj.shortName}.
+                    </div>
+                  `}
+                </div>
+
+                <!-- 4 Key Route Metrics -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
+                    <span class="text-lg">🛣️</span>
+                    <div>
+                      <div class="text-[11px] text-slate-500">Jarak</div>
+                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${formatDecimal(displayedMetrics.distance)} km</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
+                    <span class="text-lg">🕒</span>
+                    <div>
+                      <div class="text-[11px] text-slate-500">Waktu</div>
+                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedMetrics.time} menit</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
+                    <span class="text-lg">🔗</span>
+                    <div>
+                      <div class="text-[11px] text-slate-500">Jumlah Sisi</div>
+                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedEdgeCount}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
+                    <span class="text-lg">📍</span>
+                    <div>
+                      <div class="text-[11px] text-slate-500">Node Dikunjungi</div>
+                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${activeResult.visitedCount}</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Proses Algoritma Step-by-Step Table (Col Span 6) -->
+              <section class="md:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span class="text-brand-600">🔗</span> Proses Algoritma: ${selectedAlgoMeta.code}
+                  </h3>
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">${activeResult.steps.length} Langkah</span>
+                </div>
+
+                <div class="overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-slate-50 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th class="py-2 px-2.5 text-center w-14">Langkah</th>
+                        <th class="py-2 px-2.5 w-24">Node Dipilih</th>
+                        <th class="py-2 px-2.5">Status / Jarak Terpendek (d)</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      ${activeResult.steps.map(s => `
+                        <tr class="${s.isGoal ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
+                          <td class="py-1.5 px-2.5 text-center font-mono">${s.step}</td>
+                          <td class="py-1.5 px-2.5 font-bold">${s.focus}</td>
+                          <td class="py-1.5 px-2.5 font-mono text-[11px]">${s.detail}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <!-- BOTTOM ROW: PERBANDINGAN BEBERAPA ALGORITMA -->
+            <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <span class="text-brand-600">📊</span> Perbandingan Beberapa Algoritma
+                </h3>
+                <button type="button" onclick="setActiveTab('bandingkan')" class="text-xs font-semibold text-brand-700 hover:underline no-print">
+                  Lihat Semua 7 Algoritma & Grafik →
+                </button>
+              </div>
+
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 text-xs">
+                    <tr>
+                      <th class="py-2.5 px-3">Algoritma</th>
+                      <th class="py-2.5 px-3">Rute yang Ditemukan</th>
+                      <th class="py-2.5 px-3 text-center">Jarak (km)</th>
+                      <th class="py-2.5 px-3 text-center">Waktu (menit)</th>
+                      <th class="py-2.5 px-3 text-center">Node Dikunjungi</th>
+                      <th class="py-2.5 px-3">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 text-xs">
+                    ${comparisonRows.map(row => {
+                      const isCurrent = row.algoId === appState.selectedAlgo;
+                      return `
+                        <tr onclick="updateSimulationParams({ selectedAlgo: '${row.algoId}' })"
+                            class="cursor-pointer transition ${isCurrent ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
+                          <td class="py-2.5 px-3 font-bold">${row.meta.code}</td>
+                          <td class="py-2.5 px-3 font-mono">${row.found ? row.path.join(' → ') : '-'}</td>
+                          <td class="py-2.5 px-3 text-center">${row.found ? formatDecimal(row.metrics.distance) : '-'}</td>
+                          <td class="py-2.5 px-3 text-center">${row.found ? row.metrics.time : '-'}</td>
+                          <td class="py-2.5 px-3 text-center">${row.visitedCount}</td>
+                          <td class="py-2.5 px-3">${row.summaryNote}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      `;
+    }
+
+    // -----------------------------------------------------------------------
+    // 9. TAB 2: EKSPLORASI GRAF (Interactive Graph Theory & Editor)
+    // -----------------------------------------------------------------------
+    function renderEksplorasi() {
+      const activeResult = runAlgorithm(appState.selectedAlgo, appState.startNode, appState.goalNode, appState.weightCriteria);
+      const adj = getAdjacencyList();
+      const V = appState.nodes.length;
+      const E = appState.edges.length;
+      const maxEdges = (V * (V - 1)) / 2;
+      const density = maxEdges > 0 ? ((E / maxEdges) * 100).toFixed(1) : 0;
+
+      const degrees = appState.nodes.map(n => ({
+        id: n.id,
+        name: n.shortName,
+        deg: (adj[n.id] || []).length,
+        neighbors: (adj[n.id] || []).map(x => x.to).join(', ')
+      }));
+      const totalDegree = degrees.reduce((acc, d) => acc + d.deg, 0);
+      const oddDegreeCount = degrees.filter(d => d.deg % 2 !== 0).length;
+      const eulerStatus = oddDegreeCount === 0
+        ? 'Sirkuit Euler (Semua simpul berderajat genap)'
+        : oddDegreeCount === 2
+        ? 'Lintasan Euler (Tepat 2 simpul berderajat ganjil)'
+        : `Bukan Graf Euler (${oddDegreeCount} simpul berderajat ganjil)`;
+
+      return `
+        <div class="space-y-5">
+          ${renderSyncedControlStrip(
+            'Eksplorasi Graf Kota Semarang G = (V, E)',
+            'Analisis struktur matematis graf, derajat simpul, matriks ketetanggaan, dan eksperimen modifikasi bobot sisi.'
+          )}
+
+          <!-- Mathematical Graph Properties Summary -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80">
+              <div class="text-xs text-slate-500 font-medium">Orde Graf |V| (Simpul)</div>
+              <div class="text-2xl font-extrabold text-brand-900 mt-1">${V} Titik</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Lokasi strategis Semarang</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80">
+              <div class="text-xs text-slate-500 font-medium">Ukuran Graf |E| (Sisi)</div>
+              <div class="text-2xl font-extrabold text-blue-700 mt-1">${E} Ruas</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Kepadatan: ${density}%</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80">
+              <div class="text-xs text-slate-500 font-medium">Lemma Jabat Tangan</div>
+              <div class="text-2xl font-extrabold text-emerald-700 mt-1">∑deg = ${totalDegree}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">2|E| = 2(${E}) = ${2 * E}</div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80">
+              <div class="text-xs text-slate-500 font-medium">Karakteristik Euler</div>
+              <div class="text-xs sm:text-sm font-bold text-amber-800 mt-1.5 leading-snug">${eulerStatus}</div>
+            </div>
+          </div>
+
+          <!-- Interactive Graph Canvas + Edge Editor -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 class="font-bold text-slate-900 text-base">Visualisasi Graf Abstraksi Interaktif</h3>
+                  <p class="text-xs text-slate-500">Klik simpul untuk ubah Tujuan, atau ubah bobot sisi di panel kanan.</p>
+                </div>
+                <button type="button" onclick="resetGraphToDefault()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition no-print">
+                  ↺ Reset Graf Default
+                </button>
+              </div>
+              ${renderAbstractGraphSVG(activeResult, false)}
+            </div>
+
+            <!-- Interactive Edge Weight Modifier & Adder -->
+            <div class="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-4">
+              <h3 class="font-bold text-slate-900 text-base">🧪 Laboratorium Modifikasi Sisi (Edge)</h3>
+              <p class="text-xs text-slate-500">Ubah bobot jalan (misal simulasi macet) atau tambah ruas jalan baru untuk melihat perubahan rute di semua tab.</p>
+
+              <form onsubmit="handleAddNewEdge(event)" class="p-3 rounded-xl bg-brand-50/70 border border-brand-100 space-y-2.5 no-print">
+                <div class="text-xs font-bold text-brand-900">+ Tambah / Perbarui Ruas Jalan</div>
+                <div class="grid grid-cols-2 gap-2">
+                  <select id="new-edge-from" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium">
+                    ${appState.nodes.map(n => `<option value="${n.id}">Dari: ${n.id} (${n.shortName})</option>`).join('')}
+                  </select>
+                  <select id="new-edge-to" class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium">
+                    ${appState.nodes.map((n, idx) => `<option value="${n.id}" ${idx === 4 ? 'selected' : ''}>Ke: ${n.id} (${n.shortName})</option>`).join('')}
+                  </select>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label class="text-[10px] text-slate-500">Jarak (km)</label>
+                    <input id="new-edge-dist" type="number" step="0.1" min="0.1" value="1.5" required class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"/>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500">Waktu (mnt)</label>
+                    <input id="new-edge-time" type="number" min="1" value="5" required class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"/>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-500">Biaya (Rp)</label>
+                    <input id="new-edge-cost" type="number" step="500" min="500" value="4000" required class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"/>
+                  </div>
+                </div>
+                <button type="submit" class="w-full btn-primary-gradient text-white font-semibold text-xs py-2 rounded-lg shadow-sm">
+                  Simpan Ruas ke Graf
+                </button>
+              </form>
+
+              <div class="max-h-[190px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                ${appState.edges.map(e => `
+                  <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
+                    <div>
+                      <span class="font-bold text-brand-900">${e.from} ↔ ${e.to}</span>
+                      <span class="text-slate-500 ml-1.5">${formatDecimal(e.distance)} km • ${e.time} mnt • ${formatCurrency(e.cost)}</span>
+                    </div>
+                    <div class="flex items-center gap-1 no-print">
+                      <button type="button" onclick="simulateTrafficOnEdge('${e.id}')" class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-semibold" title="Tambah +2 km & +8 mnt (Simulasi Macet)">
+                        +Macet
+                      </button>
+                      <button type="button" onclick="deleteEdgeById('${e.id}')" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold" title="Hapus Sisi">
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Adjacency Matrix & Degree Sequence Table -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <h3 class="font-bold text-slate-900 text-base">Matriks Ketetanggaan Berbobot (Weighted Adjacency Matrix)</h3>
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-center border-collapse text-xs font-mono">
+                  <thead class="bg-slate-100 text-slate-700 font-bold">
+                    <tr>
+                      <th class="p-2 border-b border-r border-slate-200">V</th>
+                      ${appState.nodes.map(n => `<th class="p-2 border-b border-slate-200">${n.id}</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${appState.nodes.map(rowN => `
+                      <tr>
+                        <td class="p-2 font-bold bg-slate-50 border-r border-slate-200 text-brand-900">${rowN.id}</td>
+                        ${appState.nodes.map(colN => {
+                          if (rowN.id === colN.id) return `<td class="p-2 text-slate-300">0</td>`;
+                          const edge = appState.edges.find(e => (e.from === rowN.id && e.to === colN.id) || (e.from === colN.id && e.to === rowN.id));
+                          if (!edge) return `<td class="p-2 text-slate-300">∞</td>`;
+                          const w = getEdgeWeight(edge, appState.weightCriteria);
+                          return `<td class="p-2 font-semibold text-blue-700 bg-blue-50/40">${appState.weightCriteria === 'cost' ? Math.round(w / 1000) + 'k' : formatDecimal(w)}</td>`;
+                        }).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <h3 class="font-bold text-slate-900 text-base">Derajat Simpul deg(v) & Adjacency List</h3>
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-100 text-slate-700 font-semibold">
+                    <tr>
+                      <th class="py-2 px-3">Simpul</th>
+                      <th class="py-2 px-3 text-center">deg(v)</th>
+                      <th class="py-2 px-3">Tetangga (Adjacency List)</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${degrees.map(d => `
+                      <tr class="hover:bg-slate-50">
+                        <td class="py-1.5 px-3 font-bold text-slate-800">${d.id} (${d.name})</td>
+                        <td class="py-1.5 px-3 text-center font-mono font-bold text-brand-700">${d.deg}</td>
+                        <td class="py-1.5 px-3 font-mono text-slate-600">{ ${d.neighbors || '∅'} }</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleAddNewEdge(e) {
+      e.preventDefault();
+      const from = document.getElementById('new-edge-from').value;
+      const to = document.getElementById('new-edge-to').value;
+      const distance = parseFloat(document.getElementById('new-edge-dist').value);
+      const time = parseInt(document.getElementById('new-edge-time').value, 10);
+      const cost = parseInt(document.getElementById('new-edge-cost').value, 10);
+
+      if (from === to) {
+        showToast('Tidak dapat membuat self-loop pada simpul yang sama.', 'error');
+        return;
+      }
+      if (![distance, time, cost].every(x => Number.isFinite(x) && x > 0)) {
+        showToast('Jarak, waktu, dan biaya harus berupa angka positif (Dijkstra/A* tidak berlaku untuk bobot negatif).', 'error');
+        return;
+      }
+
+      const existing = appState.edges.find(edge => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from));
+      if (existing) {
+        existing.distance = distance;
+        existing.time = time;
+        existing.cost = cost;
+        showToast(`Bobot sisi ${from} ↔ ${to} berhasil diperbarui!`);
+      } else {
+        appState.edges.push({
+          id: 'e' + Date.now(),
+          from,
+          to,
+          distance,
+          time,
+          cost,
+          road: `Ruas Penghubung ${from}–${to}`
+        });
+        showToast(`Ruas baru ${from} ↔ ${to} ditambahkan ke graf!`);
+      }
+      renderApp();
+    }
+
+    function simulateTrafficOnEdge(edgeId) {
+      const edge = appState.edges.find(e => e.id === edgeId);
+      if (edge) {
+        edge.time += 8; // macet hanya menambah waktu tempuh; jarak & tarif tetap
+        showToast(`Simulasi macet pada ${edge.from}–${edge.to}: waktu +8 mnt`, 'info');
+        renderApp();
+      }
+    }
+
+    function deleteEdgeById(edgeId) {
+      if (appState.edges.length <= 3) {
+        showToast('Minimal harus tersisa 3 sisi agar graf tetap dapat dieksplorasi.', 'error');
+        return;
+      }
+      appState.edges = appState.edges.filter(e => e.id !== edgeId);
+      showToast('Sisi berhasil dihapus dari graf.', 'info');
+      renderApp();
+    }
+
+    function resetGraphToDefault() {
+      appState.nodes = JSON.parse(JSON.stringify(INITIAL_NODES));
+      appState.edges = JSON.parse(JSON.stringify(INITIAL_EDGES));
+      appState.startNode = 'A';
+      appState.goalNode = 'G';
+      appState.previewAltRoutePath = null;
+      showToast('Graf Kota Semarang dikembalikan ke kondisi awal!');
+      renderApp();
+    }
+
+    // -----------------------------------------------------------------------
+    // 10. TAB 3: ALGORITMA (Deep-Dive Step Simulator for 7 Algorithms)
+    // -----------------------------------------------------------------------
+    function renderAlgoritma() {
+      const activeResult = runAlgorithm(appState.selectedAlgo, appState.startNode, appState.goalNode, appState.weightCriteria);
+      const meta = activeResult.meta;
+      const totalSteps = Math.max(1, activeResult.steps.length);
+      const clampedIdx = Math.min(appState.algoStepIndex, totalSteps - 1);
+      appState.algoStepIndex = clampedIdx;
+      const currentStepObj = activeResult.steps[clampedIdx] || { step: 1, focus: '-', detail: '-' };
+
+      return `
+        <div class="space-y-5">
+          ${renderSyncedControlStrip(
+            `Bedah Algoritma: ${meta.name}`,
+            'Simulasi langkah demi langkah, pseudocode, kompleksitas asimtotik, dan struktur data internal algoritma.'
+          )}
+
+          <!-- 7 Algorithm Pill Selector Bar -->
+          <div class="bg-white rounded-2xl p-3 card-shadow border border-slate-200/80 flex flex-wrap gap-2 no-print">
+            ${ALGORITHMS_META.map(a => {
+              const active = a.id === appState.selectedAlgo;
+              return `
+                <button type="button" onclick="updateSimulationParams({ selectedAlgo: '${a.id}' })"
+                        class="px-3.5 py-2 rounded-xl text-xs font-bold transition ${active ? 'btn-primary-gradient text-white shadow' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                  ${a.code}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Algorithm Theory & Complexity Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 text-xs font-bold">${meta.category}</span>
+                <div class="flex items-center gap-2 text-xs font-mono">
+                  <span class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200">Waktu: <strong>${meta.timeComplexity}</strong></span>
+                  <span class="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-900 border border-sky-200">Memori: <strong>${meta.spaceComplexity}</strong></span>
+                </div>
+              </div>
+              <h3 class="text-lg font-extrabold text-slate-900">${meta.name}</h3>
+              <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${meta.description}</p>
+              <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+                <strong>Sifat Optimalitas:</strong> ${meta.optimalNote}
+              </div>
+            </div>
+
+            <!-- Pseudocode Block -->
+            <div class="lg:col-span-5 bg-slate-900 text-slate-100 rounded-2xl p-5 card-shadow space-y-2.5">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="font-bold text-indigo-300">Pseudocode (${meta.code})</span>
+                <span class="font-mono">Matematika Diskrit</span>
+              </div>
+              <pre class="font-mono text-xs leading-relaxed text-emerald-300 overflow-x-auto">${meta.pseudocode.join('\n')}</pre>
+            </div>
+          </div>
+
+          <!-- Interactive Step-by-Step Playback & Visual Graph -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-base">Visualisasi Hasil (${meta.code})</h3>
+                <span class="text-xs font-bold text-brand-700">${activeResult.found ? activeResult.path.join(' → ') : 'Tidak ada rute'}</span>
+              </div>
+              ${renderAbstractGraphSVG(activeResult, false)}
+            </div>
+
+            <!-- Step Scrubber & Trace Table -->
+            <div class="lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-slate-900 text-base">Simulasi Iterasi (Langkah ${clampedIdx + 1} / ${totalSteps})</h3>
+                <div class="flex items-center gap-1.5 no-print">
+                  <button type="button" onclick="stepAlgoPlayback(-1)" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold">◀ Prev</button>
+                  <button type="button" onclick="toggleAutoPlay()" id="autoplay-btn" class="px-3 py-1 rounded-lg btn-primary-gradient text-white text-xs font-bold">
+                    ${appState.autoPlayTimer ? '⏸ Pause' : '▶ Auto Play'}
+                  </button>
+                  <button type="button" onclick="stepAlgoPlayback(1)" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold">Next ▶</button>
+                </div>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-brand-50 border border-brand-200 space-y-1">
+                <div class="text-xs font-bold text-brand-900">Fokus Langkah #${currentStepObj.step}: ${currentStepObj.focus}</div>
+                <div class="font-mono text-xs text-slate-800">${currentStepObj.detail}</div>
+              </div>
+
+              <div class="overflow-x-auto max-h-[210px] rounded-xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead class="bg-slate-50 text-slate-600 font-semibold sticky top-0 border-b border-slate-200">
+                    <tr>
+                      <th class="py-2 px-2.5 text-center w-14">Step</th>
+                      <th class="py-2 px-2.5 w-28">Elemen Dipilih</th>
+                      <th class="py-2 px-2.5">Keadaan / Hasil Iterasi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${activeResult.steps.map((s, idx) => `
+                      <tr onclick="jumpToAlgoStep(${idx})" class="cursor-pointer ${idx === clampedIdx ? 'bg-brand-100 font-bold text-brand-950' : s.isGoal ? 'bg-emerald-50 text-emerald-900' : 'hover:bg-slate-50 text-slate-700'}">
+                        <td class="py-1.5 px-2.5 text-center font-mono">${s.step}</td>
+                        <td class="py-1.5 px-2.5 font-bold">${s.focus}</td>
+                        <td class="py-1.5 px-2.5 font-mono text-[11px]">${s.detail}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extra Matrix View if Floyd-Warshall is Selected -->
+          ${appState.selectedAlgo === 'floyd' && activeResult.matrix ? `
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+              <h3 class="font-bold text-slate-900 text-base">Matriks Jarak Terpendek Semua Pasangan (Floyd-Warshall Output)</h3>
+              <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-center border-collapse text-xs font-mono">
+                  <thead class="bg-brand-900 text-white">
+                    <tr>
+                      <th class="p-2">Dari \ Ke</th>
+                      ${appState.nodes.map(n => `<th class="p-2">${n.id}</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${activeResult.matrix.map((row, i) => `
+                      <tr>
+                        <td class="p-2 font-bold bg-slate-100 text-brand-900">${appState.nodes[i].id}</td>
+                        ${row.map((val, j) => {
+                          const isPair = appState.nodes[i].id === appState.startNode && appState.nodes[j].id === appState.goalNode;
+                          return `<td class="p-2 ${isPair ? 'bg-emerald-200 font-extrabold text-emerald-950' : ''}">${val === Infinity ? '∞' : formatDecimal(val)}</td>`;
+                        }).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function stepAlgoPlayback(delta) {
+      stopAutoPlay();
+      const res = runAlgorithm(appState.selectedAlgo);
+      const maxIdx = Math.max(0, res.steps.length - 1);
+      appState.algoStepIndex = Math.min(maxIdx, Math.max(0, appState.algoStepIndex + delta));
+      renderApp();
+    }
+
+    function jumpToAlgoStep(idx) {
+      stopAutoPlay();
+      appState.algoStepIndex = idx;
+      renderApp();
+    }
+
+    function toggleAutoPlay() {
+      if (appState.autoPlayTimer) {
+        stopAutoPlay();
+        renderApp();
+        return;
+      }
+      const res = runAlgorithm(appState.selectedAlgo);
+      if (appState.algoStepIndex >= res.steps.length - 1) {
+        appState.algoStepIndex = 0;
+      }
+      appState.autoPlayTimer = setInterval(() => {
+        const currentRes = runAlgorithm(appState.selectedAlgo);
+        if (appState.algoStepIndex < currentRes.steps.length - 1) {
+          appState.algoStepIndex++;
+          renderApp();
+        } else {
+          stopAutoPlay();
+          renderApp();
+        }
+      }, 950);
+      renderApp();
+    }
+
+    function stopAutoPlay() {
+      if (appState.autoPlayTimer) {
+        clearInterval(appState.autoPlayTimer);
+        appState.autoPlayTimer = null;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 11. TAB 4: BANDINGKAN ALGORITMA (All 7 Algorithms Synchronized Benchmark)
+    // -----------------------------------------------------------------------
+    function renderBandingkan() {
+      const allResults = ALGORITHMS_META.map(meta =>
+        runAlgorithm(meta.id, appState.startNode, appState.goalNode, appState.weightCriteria)
+      );
+
+      const maxDist = Math.max(...allResults.map(r => r.metrics.distance || 1), 1);
+      const maxVisited = Math.max(...allResults.map(r => r.visitedCount || 1), 1);
+
+      const dijkstraRes = allResults.find(r => r.algoId === 'dijkstra');
+      const astarRes = allResults.find(r => r.algoId === 'astar');
+      const bfsRes = allResults.find(r => r.algoId === 'bfs');
+
+      return `
+        <div class="space-y-5">
+          ${renderSyncedControlStrip(
+            'Perbandingan Komprehensif 7 Algoritma Graf',
+            'Evaluasi performa seluruh 7 algoritma secara bersamaan berdasarkan titik awal, tujuan, dan kriteria bobot dari Dashboard.'
+          )}
+
+          <!-- Analytical Insight Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-emerald-500">
+              <div class="text-xs font-bold text-emerald-700 uppercase">Rute Bobot Paling Optimal</div>
+              <div class="text-base font-extrabold text-slate-900 mt-1">
+                Dijkstra & A* (${formatDecimal(dijkstraRes.metrics.distance)} km • ${dijkstraRes.metrics.time} mnt)
+              </div>
+              <p class="text-xs text-slate-600 mt-1">
+                A* menemukan rute optimal yang sama dengan mengekspansi <strong>${astarRes.visitedCount} simpul</strong> dibanding Dijkstra (<strong>${dijkstraRes.visitedCount} simpul</strong>).
+              </p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-blue-500">
+              <div class="text-xs font-bold text-blue-700 uppercase">Transit / Sisi Paling Sedikit</div>
+              <div class="text-base font-extrabold text-slate-900 mt-1">
+                BFS (${bfsRes.edgeCount} Sisi • ${formatDecimal(bfsRes.metrics.distance)} km)
+              </div>
+              <p class="text-xs text-slate-600 mt-1">
+                BFS meminimalkan jumlah persimpangan yang dilewati tanpa mempertimbangkan bobot jarak atau waktu tempuh.
+              </p>
+            </div>
+            <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-purple-500">
+              <div class="text-xs font-bold text-purple-700 uppercase">Optimasi Jaringan (MST)</div>
+              <div class="text-base font-extrabold text-slate-900 mt-1">
+                Prim & Kruskal (${appState.nodes.length - 1} Sisi Utama)
+              </div>
+              <p class="text-xs text-slate-600 mt-1">
+                Menghubungkan seluruh ${appState.nodes.length} titik Kota Semarang tanpa siklus dengan total bobot infrastruktur minimum.
+              </p>
+            </div>
+          </div>
+
+          <!-- Visual Bar Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">Grafik Perbandingan Jarak Rute (km)</h3>
+              <div class="space-y-2.5 pt-1">
+                ${allResults.map(r => {
+                  const pct = r.found ? Math.min(100, Math.round((r.metrics.distance / maxDist) * 100)) : 0;
+                  const isSel = r.algoId === appState.selectedAlgo;
+                  return `
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs">
+                        <span class="font-bold ${isSel ? 'text-brand-700' : 'text-slate-700'}">${r.meta.code} ${isSel ? '(Aktif)' : ''}</span>
+                        <span class="font-mono font-semibold text-slate-800">${r.found ? formatDecimal(r.metrics.distance) + ' km' : 'N/A'}</span>
+                      </div>
+                      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${isSel ? 'bg-brand-600' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">Grafik Efisiensi Ekspansi Simpul (Node Dikunjungi)</h3>
+              <div class="space-y-2.5 pt-1">
+                ${allResults.map(r => {
+                  const pct = Math.min(100, Math.round((r.visitedCount / maxVisited) * 100));
+                  const isSel = r.algoId === appState.selectedAlgo;
+                  return `
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs">
+                        <span class="font-bold ${isSel ? 'text-emerald-700' : 'text-slate-700'}">${r.meta.code} <span class="font-normal text-slate-400">(${r.meta.timeComplexity})</span></span>
+                        <span class="font-mono font-semibold text-slate-800">${r.visitedCount} node</span>
+                      </div>
+                      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500 ${isSel ? 'bg-emerald-500' : 'bg-amber-500'}" style="width: ${pct}%"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Full 7-Algorithm Comparison Table -->
+          <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-slate-900 text-base">Tabel Lengkap Hasil Percobaan 7 Algoritma</h3>
+              <span class="text-xs text-slate-500">Klik baris untuk memilih algoritma aktif</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-brand-950 text-white font-semibold">
+                  <tr>
+                    <th class="py-3 px-3">Algoritma</th>
+                    <th class="py-3 px-3">Rute yang Ditemukan</th>
+                    <th class="py-3 px-3 text-center">Jarak (km)</th>
+                    <th class="py-3 px-3 text-center">Waktu (mnt)</th>
+                    <th class="py-3 px-3 text-right">Biaya (Rp)</th>
+                    <th class="py-3 px-3 text-center">Sisi</th>
+                    <th class="py-3 px-3 text-center">Node Dikunjungi</th>
+                    <th class="py-3 px-3">Kompleksitas</th>
+                    <th class="py-3 px-3">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${allResults.map(r => {
+                    const isCurrent = r.algoId === appState.selectedAlgo;
+                    return `
+                      <tr onclick="updateSimulationParams({ selectedAlgo: '${r.algoId}' })"
+                          class="cursor-pointer transition ${isCurrent ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
+                        <td class="py-2.5 px-3 font-bold">${r.meta.code}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.found ? r.path.join(' → ') : '-'}</td>
+                        <td class="py-2.5 px-3 text-center">${r.found ? formatDecimal(r.metrics.distance) : '-'}</td>
+                        <td class="py-2.5 px-3 text-center">${r.found ? r.metrics.time : '-'}</td>
+                        <td class="py-2.5 px-3 text-right">${r.found ? formatCurrency(r.metrics.cost) : '-'}</td>
+                        <td class="py-2.5 px-3 text-center">${r.edgeCount}</td>
+                        <td class="py-2.5 px-3 text-center">${r.visitedCount}</td>
+                        <td class="py-2.5 px-3 font-mono">${r.meta.timeComplexity}</td>
+                        <td class="py-2.5 px-3">${r.summaryNote}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // -----------------------------------------------------------------------
+    // 12. TAB 5: TUGAS / CHALLENGE (Interactive Lab Tasks + Quiz)
+    // -----------------------------------------------------------------------
+    const LAB_TASKS = [
+      {
+        id: 't1',
+        title: 'Eksperimen 1: Rute Terpendek Polines ke Lawang Sewu',
+        instruction: 'Atur Titik Awal = Polines (A), Tujuan = Lawang Sewu (G), Algoritma = Dijkstra, dan Kriteria = Jarak (km) di Dashboard.',
+        check: () => appState.startNode === 'A' && appState.goalNode === 'G' && appState.selectedAlgo === 'dijkstra' && appState.weightCriteria === 'distance',
+        get expectedHint() { const r = runAlgorithm('dijkstra', 'A', 'G', 'distance'); return `Hasil optimal Dijkstra adalah ${r.path.join(' → ')} dengan total jarak ${formatDecimal(r.metrics.distance)} km.`; }
+      },
+      {
+        id: 't2',
+        title: 'Eksperimen 2: Minimum Transit (Hop) dengan BFS',
+        instruction: 'Gunakan rute yang sama (Polines A → Lawang Sewu G), lalu ubah algoritma menjadi BFS untuk menemukan jalur dengan jumlah sisi paling sedikit.',
+        check: () => appState.startNode === 'A' && appState.goalNode === 'G' && appState.selectedAlgo === 'bfs',
+        get expectedHint() { const r = runAlgorithm('bfs', 'A', 'G', 'distance'); return `BFS memilih jalur ${r.path.join(' → ')} dengan ${r.edgeCount} sisi (${formatDecimal(r.metrics.distance)} km). Bandingkan dengan Dijkstra: sisi paling sedikit belum tentu paling pendek.`; }
+      },
+      {
+        id: 't3',
+        title: 'Eksperimen 3: Efisiensi Heuristik dengan Algoritma A*',
+        instruction: 'Pilih algoritma A* untuk rute Polines (A) menuju Kota Lama (H) dengan kriteria Waktu (menit).',
+        check: () => appState.startNode === 'A' && appState.goalNode === 'H' && appState.selectedAlgo === 'astar' && appState.weightCriteria === 'time',
+        expectedHint: 'A* memangkas jumlah simpul yang diekspansi menggunakan fungsi evaluasi f(n) = g(n) + h(n).'
+      },
+      {
+        id: 't4',
+        title: 'Eksperimen 4: Minimum Spanning Tree (Prim / Kruskal)',
+        instruction: 'Pilih algoritma Prim atau Kruskal untuk membangun jaringan kabel fiber optik terpendek yang menghubungkan seluruh titik di Kota Semarang.',
+        check: () => appState.selectedAlgo === 'prim' || appState.selectedAlgo === 'kruskal',
+        get expectedHint() { const v = appState.nodes.length; return `MST menghubungkan |V| = ${v} simpul menggunakan tepat |V| - 1 = ${v - 1} sisi tanpa siklus.`; }
+      }
+    ];
+
+    const QUIZ_QUESTIONS = [
+      {
+        id: 'q1',
+        get question() { return `Berdasarkan Lemma Jabat Tangan pada graf tak berarah G = (V, E), jika graf Kota Semarang memiliki ${appState.edges.length} sisi (|E| = ${appState.edges.length}), berapakah jumlah total derajat seluruh simpulnya?`; },
+        get options() { const e = appState.edges.length; return [String(e), String(2 * e), String(3 * e), String(e / 2)]; },
+        correct: 1
+      },
+      {
+        id: 'q2',
+        question: 'Mengapa algoritma BFS (Breadth-First Search) tidak selalu menghasilkan rute terpendek pada graf berbobot seperti peta jalan Kota Semarang?',
+        options: [
+          'Karena BFS menggunakan Stack LIFO',
+          'Karena BFS hanya meminimalkan jumlah sisi (edge) tanpa memperhitungkan bobot jarak/waktu',
+          'Karena BFS hanya bekerja pada graf berarah',
+          'Karena BFS memiliki kompleksitas O(V³)'
+        ],
+        correct: 1
+      },
+      {
+        id: 'q3',
+        question: 'Pada algoritma A*, fungsi evaluasi setiap simpul dinyatakan sebagai f(n) = g(n) + h(n). Apa makna dari komponen h(n)?',
+        options: [
+          'Biaya aktual dari titik awal ke simpul n',
+          'Jumlah derajat simpul n',
+          'Estimasi biaya heuristik dari simpul n menuju titik tujuan (Goal)',
+          'Total bobot Minimum Spanning Tree'
+        ],
+        correct: 2
+      }
+    ];
+
+    function renderTugas() {
+      const completedCount = Object.values(appState.challengeProgress.completedTasks).filter(Boolean).length;
+      const correctQuizCount = QUIZ_QUESTIONS.filter(q => appState.challengeProgress.quizAnswers[q.id] === q.correct).length;
+
+      return `
+        <div class="space-y-5">
+          <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg sm:text-xl font-bold text-slate-900">Tugas & Challenge Praktikum Graf</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">Skor: ${completedCount}/${LAB_TASKS.length} Lab • ${correctQuizCount}/${QUIZ_QUESTIONS.length} Kuis</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Lakukan percobaan pada Dashboard sesuai instruksi di bawah, lalu verifikasi otomatis dan cetak hasilnya ke PDF sebagai laporan praktikum.
+              </p>
+            </div>
+            <button onclick="triggerPrintPDF('Lembar Tugas & Hasil Percobaan')" type="button" class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs sm:text-sm transition no-print">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>Cetak Laporan Tugas (PDF)</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 space-y-3.5">
+              <h3 class="font-bold text-slate-900 text-base px-1">📋 Daftar Percobaan Simulasi (Verifikasi Otomatis)</h3>
+              ${LAB_TASKS.map(task => {
+                const isDone = !!appState.challengeProgress.completedTasks[task.id];
+                return `
+                  <div class="bg-white rounded-2xl p-4 card-shadow border ${isDone ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200/80'} space-y-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                      <h4 class="font-bold text-sm text-slate-900">${task.title}</h4>
+                      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${isDone ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}">
+                        ${isDone ? '✓ Selesai' : 'Belum Diverifikasi'}
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed">${task.instruction}</p>
+                    <div class="p-2.5 rounded-xl bg-slate-50 text-[11px] text-slate-700 border border-slate-100">
+                      <strong>Kunci Analisis:</strong> ${task.expectedHint}
+                    </div>
+                    <div class="flex items-center gap-2 pt-1 no-print">
+                      <button type="button" onclick="verifyLabTask('${task.id}')" class="btn-primary-gradient text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-sm">
+                        ✓ Verifikasi dari Simulasi Saat Ini
+                      </button>
+                      <button type="button" onclick="setActiveTab('dashboard')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg">
+                        Atur di Dashboard
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="lg:col-span-5 space-y-3.5">
+              <h3 class="font-bold text-slate-900 text-base px-1">🧠 Kuis Evaluasi Teori Graf</h3>
+              ${QUIZ_QUESTIONS.map((q, qIdx) => {
+                const chosen = appState.challengeProgress.quizAnswers[q.id];
+                return `
+                  <div class="bg-white rounded-2xl p-4 card-shadow border border-slate-200/80 space-y-2.5">
+                    <div class="text-xs font-bold text-brand-800">Pertanyaan ${qIdx + 1}</div>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-800">${q.question}</p>
+                    <div class="space-y-1.5">
+                      ${q.options.map((opt, oIdx) => {
+                        const isPicked = chosen === oIdx;
+                        const isCorrect = oIdx === q.correct;
+                        let style = 'border-slate-200 hover:bg-slate-50 text-slate-700';
+                        if (chosen !== undefined) {
+                          if (isPicked && isCorrect) style = 'border-emerald-500 bg-emerald-50 text-emerald-950 font-bold';
+                          else if (isPicked && !isCorrect) style = 'border-rose-400 bg-rose-50 text-rose-900 font-semibold';
+                          else if (isCorrect) style = 'border-emerald-300 bg-emerald-50/50 text-emerald-900';
+                        }
+                        return `
+                          <button type="button" onclick="answerQuizQuestion('${q.id}', ${oIdx})"
+                                  class="w-full text-left px-3 py-2 rounded-xl border text-xs transition ${style}">
+                            ${String.fromCharCode(65 + oIdx)}. ${opt}
+                          </button>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function verifyLabTask(taskId) {
+      const task = LAB_TASKS.find(t => t.id === taskId);
+      if (!task) return;
+      if (task.check()) {
+        appState.challengeProgress.completedTasks[taskId] = true;
+        showToast(`Selamat! ${task.title} berhasil diverifikasi!`);
+        renderApp();
+      } else {
+        showToast('Parameter Dashboard belum sesuai dengan instruksi tugas ini. Silakan sesuaikan terlebih dahulu.', 'error');
+      }
+    }
+
+    function answerQuizQuestion(qId, optIdx) {
+      appState.challengeProgress.quizAnswers[qId] = optIdx;
+      const q = QUIZ_QUESTIONS.find(item => item.id === qId);
+      if (q && q.correct === optIdx) {
+        showToast('Jawaban tepat!');
+      } else {
+        showToast('Jawaban belum tepat, coba periksa kembali konsepnya.', 'error');
+      }
+      renderApp();
+    }
+
+    // -----------------------------------------------------------------------
+    // 13. TAB 6: TENTANG APLIKASI (Academic Docs & Editable Student Metadata)
+    // -----------------------------------------------------------------------
+    function renderTentang() {
+      return `
+        <div class="space-y-5">
+          <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">Tentang Aplikasi & Identitas Praktikan</h2>
+              <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                Media pembelajaran interaktif Matematika Diskrit berbasis studi kasus jaringan transportasi Kota Semarang.
+              </p>
+            </div>
+            <button onclick="triggerPrintPDF('Dokumentasi & Identitas Aplikasi')" type="button" class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs sm:text-sm transition no-print">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>Cetak Profil & Dokumentasi (PDF)</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- Student Identity Card (Used in PDF Print Header) -->
+            <div class="lg:col-span-5 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
+              <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <div class="w-12 h-12 rounded-2xl btn-primary-gradient text-white flex items-center justify-center text-xl font-extrabold shadow">
+                  ${appState.student.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-base">Identitas Mahasiswa (Header PDF)</h3>
+                  <p class="text-xs text-slate-500">Otomatis dicantumkan saat mencetak PDF di semua tab</p>
+                </div>
+              </div>
+
+              <form onsubmit="saveStudentIdentity(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Mahasiswa</label>
+                  <input id="stu-name" type="text" value="${appState.student.name}" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">NIM</label>
+                  <input id="stu-nim" type="text" value="${appState.student.nim}" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Program Studi</label>
+                  <input id="stu-prodi" type="text" value="${appState.student.prodi}" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium"/>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600 mb-1">Institusi / Kampus</label>
+                  <input id="stu-campus" type="text" value="${appState.student.campus}" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm font-medium"/>
+                </div>
+                <button type="submit" class="w-full btn-primary-gradient text-white font-semibold text-xs sm:text-sm py-2.5 rounded-xl shadow no-print">
+                  Simpan Identitas Laporan PDF
+                </button>
+              </form>
+            </div>
+
+            <!-- Academic Documentation & 7 Algorithms Summary -->
+            <div class="lg:col-span-7 bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-4">
+              <h3 class="font-bold text-slate-900 text-base">📚 Ringkasan Materi Matematika Diskrit: Graf & Aplikasinya</h3>
+              <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Dalam Matematika Diskrit, graf didefinisikan sebagai pasangan terurut <strong>G = (V, E)</strong> di mana <strong>V</strong> adalah himpunan tidak kosong dari simpul (<em>vertices</em>) yang merepresentasikan lokasi penting di Kota Semarang (seperti Polines, Simpang Lima, Tugu Muda, dan Lawang Sewu), sedangkan <strong>E</strong> adalah himpunan sisi (<em>edges</em>) yang merepresentasikan ruas jalan penghubung dengan bobot jarak (km), waktu tempuh (menit), maupun biaya perjalanan (Rp).
+              </p>
+
+              <div class="space-y-2">
+                <div class="text-xs font-bold text-brand-900 uppercase tracking-wide">7 Algoritma yang Diimplementasikan:</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  ${ALGORITHMS_META.map(a => `
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <div class="font-bold text-brand-900">${a.name}</div>
+                      <div class="text-slate-600 mt-0.5 text-[11px]">${a.optimalNote}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveStudentIdentity(e) {
+      e.preventDefault();
+      appState.student.name = document.getElementById('stu-name').value.trim() || 'Farel';
+      appState.student.nim = document.getElementById('stu-nim').value.trim();
+      appState.student.prodi = document.getElementById('stu-prodi').value.trim();
+      appState.student.campus = document.getElementById('stu-campus').value.trim();
+      document.getElementById('header-student-name').textContent = `${appState.student.name} • D4 TRK`;
+      showToast('Identitas mahasiswa berhasil disimpan untuk header cetak PDF!');
+      renderApp();
+    }
+
+    // -----------------------------------------------------------------------
+    // 14. MAIN RENDER ORCHESTRATOR WITH SAFE ERROR BOUNDARY
+    // -----------------------------------------------------------------------
+    function renderSidebar() {
+      const navContainer = document.getElementById('sidebar-nav');
+      if (!navContainer) return;
+      navContainer.innerHTML = MENU_ITEMS.map(item => {
+        const isActive = item.id === appState.activeTab;
+        return `
+          <button type="button" onclick="setActiveTab('${item.id}')"
+                  class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                    isActive
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-950/30'
+                      : 'text-indigo-100/85 hover:bg-white/10 hover:text-white'
+                  }">
+            ${item.icon}
+            <span class="truncate">${item.label}</span>
+          </button>
+        `;
+      }).join('');
+
+      const algoMeta = ALGORITHMS_META.find(a => a.id === appState.selectedAlgo);
+      const syncRouteEl = document.getElementById('sidebar-sync-route');
+      const syncAlgoEl = document.getElementById('sidebar-sync-algo');
+      const syncCritEl = document.getElementById('sidebar-sync-criteria');
+      if (syncRouteEl) syncRouteEl.textContent = `${appState.startNode} → ${appState.goalNode}`;
+      if (syncAlgoEl) syncAlgoEl.textContent = algoMeta ? algoMeta.code : 'Dijkstra';
+      if (syncCritEl) syncCritEl.textContent = getCriteriaInfo(appState.weightCriteria).label;
+    }
+
+// -----------------------------------------------------------------------
+    // ZOOM & GESER (PAN) PETA DAN GRAF
+    // Roda mouse = zoom ke arah kursor; seret = geser; 2 jari = pinch; tombol + / − / ⟲.
+    // Status tampilan disimpan di appState.pz sehingga bertahan saat aplikasi di-render ulang.
+    // -----------------------------------------------------------------------
+    appState.pz = { map: { k: 1, x: 0, y: 0 }, graph: { k: 1, x: 0, y: 0 } };
+    const PZ_MIN = 0.6, PZ_MAX = 6, PZ_CENTER = { x: 220, y: 260 };
+
+    function renderPanZoomControls(name) {
+      const btn = 'px-2.5 py-1 text-slate-700 hover:bg-slate-100 font-bold text-sm';
+      return `
+        <div data-pz-ui class="absolute bottom-2.5 right-2.5 flex flex-col bg-white rounded-lg shadow border border-slate-200 overflow-hidden no-print">
+          <button type="button" onclick="pzButton('${name}','in')" class="${btn} border-b border-slate-200" title="Perbesar">+</button>
+          <button type="button" onclick="pzButton('${name}','out')" class="${btn} border-b border-slate-200" title="Perkecil">−</button>
+          <button type="button" onclick="pzButton('${name}','reset')" class="${btn}" title="Reset tampilan">⟲</button>
+        </div>
+        <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-white/85 border border-slate-200 text-[10px] text-slate-500 pointer-events-none no-print">Scroll: zoom · Seret: geser</div>`;
+    }
+
+    function pzApply(box, name) {
+      const g = box.querySelector('.pz-layer'), v = appState.pz[name];
+      if (g) g.setAttribute('transform', `translate(${v.x} ${v.y}) scale(${v.k})`);
+    }
+
+    // Zoom dengan titik (cx, cy) tetap di tempat (koordinat viewBox SVG)
+    function pzZoomAt(box, name, factor, cx, cy) {
+      const v = appState.pz[name];
+      const k = Math.min(PZ_MAX, Math.max(PZ_MIN, v.k * factor));
+      const r = k / v.k;
+      v.x = cx - (cx - v.x) * r;
+      v.y = cy - (cy - v.y) * r;
+      v.k = k;
+      pzApply(box, name);
+    }
+
+    function pzButton(name, action) {
+      const box = document.querySelector(`[data-panzoom="${name}"]`);
+      if (!box) return;
+      if (action === 'reset') {
+        appState.pz[name] = { k: 1, x: 0, y: 0 };
+        pzApply(box, name);
+      } else {
+        pzZoomAt(box, name, action === 'in' ? 1.3 : 1 / 1.3, PZ_CENTER.x, PZ_CENTER.y);
+      }
+    }
+
+    function pzToSvg(svg, clientX, clientY) {
+      const m = svg.getScreenCTM();
+      if (!m) return { x: 0, y: 0 };
+      const p = svg.createSVGPoint();
+      p.x = clientX; p.y = clientY;
+      const q = p.matrixTransform(m.inverse());
+      return { x: q.x, y: q.y };
+    }
+
+    function initPanZoom() {
+      document.querySelectorAll('[data-panzoom]').forEach(box => {
+        const name = box.dataset.panzoom;
+        const svg = box.querySelector('svg');
+        if (!svg) return;
+        const pts = new Map();
+        let start = null, moved = false, lastDist = 0;
+
+        box.addEventListener('wheel', e => {
+          e.preventDefault();
+          const p = pzToSvg(svg, e.clientX, e.clientY);
+          pzZoomAt(box, name, e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+        }, { passive: false });
+
+        box.addEventListener('pointerdown', e => {
+          if (e.target.closest('[data-pz-ui]')) return;
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          start = { x: e.clientX, y: e.clientY };
+          moved = false; lastDist = 0;
+        });
+
+        box.addEventListener('pointermove', e => {
+          const prev = pts.get(e.pointerId);
+          if (!prev) return;
+          pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pts.size === 2) { // pinch dua jari
+            const [a, b] = [...pts.values()];
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            if (lastDist > 0) {
+              const c = pzToSvg(svg, (a.x + b.x) / 2, (a.y + b.y) / 2);
+              pzZoomAt(box, name, dist / lastDist, c.x, c.y);
+            }
+            lastDist = dist; moved = true;
+            return;
+          }
+          if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 5) return; // ambang agar klik simpul tetap berfungsi
+          if (!moved) { moved = true; try { box.setPointerCapture(e.pointerId); } catch (_) {} }
+          const m = svg.getScreenCTM();
+          const s = m ? m.a : 1;
+          const v = appState.pz[name];
+          v.x += (e.clientX - prev.x) / s;
+          v.y += (e.clientY - prev.y) / s;
+          pzApply(box, name);
+        });
+
+        const end = e => { pts.delete(e.pointerId); if (pts.size < 2) lastDist = 0; };
+        box.addEventListener('pointerup', end);
+        box.addEventListener('pointercancel', end);
+        box.addEventListener('pointerleave', e => { if (!box.hasPointerCapture || !box.hasPointerCapture(e.pointerId)) end(e); });
+      });
+    }
+
+    function renderApp() {
+      const root = document.getElementById('tab-content-root');
+      try {
+        renderSidebar();
+        if (!root) return;
+        switch (appState.activeTab) {
+          case 'eksplorasi':
+            root.innerHTML = renderEksplorasi();
+            break;
+          case 'algoritma':
+            root.innerHTML = renderAlgoritma();
+            break;
+          case 'bandingkan':
+            root.innerHTML = renderBandingkan();
+            break;
+          case 'tugas':
+            root.innerHTML = renderTugas();
+            break;
+          case 'tentang':
+            root.innerHTML = renderTentang();
+            break;
+          case 'dashboard':
+          default:
+            root.innerHTML = renderDashboard();
+            break;
+        }
+      } catch (err) {
+        console.error('Render Error:', err);
+        if (root) {
+          root.innerHTML = `
+            <div class="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-900 space-y-2">
+              <h3 class="font-bold text-base">Terjadi Kesalahan Saat Memuat Tampilan</h3>
+              <p class="text-xs font-mono">${err.message}</p>
+              <button type="button" onclick="resetGraphToDefault()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-semibold">
+                Muat Ulang Simulasi
+              </button>
+            </div>
+          `;
+        }
+      }
+      initPanZoom();
+    }
+
+    // Initialize application safely on load
+    function initApplication() {
+      const mobileBtn = document.getElementById('mobile-menu-btn');
+      if (mobileBtn) {
+        mobileBtn.addEventListener('click', () => toggleMobileSidebar());
+      }
+      renderApp();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApplication);
+    } else {
+      initApplication();
+    }
+  </script>
+</body>
+</html>
