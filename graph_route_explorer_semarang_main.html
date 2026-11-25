@@ -6,7 +6,11 @@
   <title>Graph Route Explorer – Semarang | Matematika Diskrit</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <!-- Resource Hints & Leaflet (Single Map Source) -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -80,15 +84,20 @@
       background: #94a3b8;
     }
 
-    /* Animated dashed edge flow for active route */
-    @keyframes dashFlow {
-      to {
-        stroke-dashoffset: -24;
+    /* Isolate layout/paint for heavy visualization containers */
+    .viz-contain {
+      contain: layout style paint;
+    }
+    @supports (content-visibility: auto) {
+      .dashboard-section-defer {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 260px;
       }
     }
-    .route-flow {
-      stroke-dasharray: 8 4;
-      animation: dashFlow 1s linear infinite;
+    @supports not (content-visibility: auto) {
+      .dashboard-section-defer {
+        contain: layout style paint;
+      }
     }
 
     /* Print / PDF Styles */
@@ -120,7 +129,21 @@
         break-inside: avoid;
       }
     }
-  </style>
+  
+    /* Label & legenda pada peta Leaflet */
+    .lf-lbl { background: rgba(255,255,255,.94); border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(15,23,42,.15); font: 600 10.5px Inter, sans-serif; color: #334155; padding: 1px 6px; border-radius: 5px; }
+    .lf-lbl:before { display: none; }
+    .lf-lbl-dim { background: rgba(255,255,255,.78); border-color: #e2e8f0; color: #64748b; font-weight: 500; font-size: 10px; }
+    .lf-lbl-path { background: #eff6ff; border: 1.5px solid #2563eb; color: #1e3a8a; font-weight: 700; }
+    .lf-lbl-start { background: #2563eb; border: 1.5px solid #ffffff; color: #ffffff; font-weight: 800; }
+    .lf-lbl-goal { background: #dc2626; border: 1.5px solid #ffffff; color: #ffffff; font-weight: 800; }
+    .lf-legend { background: rgba(255,255,255,.96); border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font: 11px/1.4 Inter, sans-serif; color: #334155; box-shadow: 0 2px 6px rgba(15,23,42,.14); max-width: 235px; }
+    .lf-legend b { font-weight: 700; }
+    .lf-legend .lf-btn-row { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .lf-legend button { padding: 3px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; font-size: 10.5px; font-weight: 600; color: #1e293b; cursor: pointer; }
+    .lf-legend button:hover { background: #e2e8f0; }
+    .leaflet-container { background: #eef2f7; }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden">
 
@@ -265,17 +288,17 @@
             </span>
           </div>
           <div class="space-y-1 text-indigo-100/90 text-[11px]">
-            <div class="flex justify-between">
-              <span class="text-indigo-300">Rute:</span>
-              <span id="sidebar-sync-route" class="font-semibold text-white">A → G</span>
+            <div class="flex justify-between items-start gap-2">
+              <span class="text-indigo-300 shrink-0">Rute:</span>
+              <span id="sidebar-sync-route" class="font-semibold text-white text-right">A → G</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-indigo-300">Algoritma:</span>
-              <span id="sidebar-sync-algo" class="font-semibold text-amber-300">Dijkstra</span>
+            <div class="flex justify-between items-start gap-2">
+              <span class="text-indigo-300 shrink-0">Algoritma:</span>
+              <span id="sidebar-sync-algo" class="font-semibold text-amber-300 text-right">Dijkstra</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-indigo-300">Bobot:</span>
-              <span id="sidebar-sync-criteria" class="font-semibold text-white">Jarak (km)</span>
+            <div class="flex justify-between items-start gap-2">
+              <span class="text-indigo-300 shrink-0">Bobot:</span>
+              <span id="sidebar-sync-criteria" class="font-semibold text-white text-right">Jarak (km)</span>
             </div>
           </div>
         </div>
@@ -560,6 +583,10 @@
       previewAltRoutePath: null, // Holds array of node IDs when user clicks an alternative route
       nodes: JSON.parse(JSON.stringify(INITIAL_NODES)),
       edges: JSON.parse(JSON.stringify(INITIAL_EDGES)),
+      graphVersion: 1,
+      _nodeMap: null,
+      _edgeMap: null,
+      _altRoutesCache: new Map(),
       student: {
         name: 'Farel',
         nim: '4.33.24.0.12',
@@ -575,8 +602,36 @@
     // -----------------------------------------------------------------------
     // 4. GRAPH UTILITY & FORMATTING HELPERS
     // -----------------------------------------------------------------------
+    function invalidateGraphCaches() {
+      appState.graphVersion++;
+      appState._nodeMap = null;
+      appState._edgeMap = null;
+      appState._altRoutesCache.clear();
+      appState.previewAltRoutePath = null;
+      appState.algoStepIndex = 0;
+    }
+
+    function getNodeMap() {
+      if (!appState._nodeMap) {
+        appState._nodeMap = new Map(appState.nodes.map(n => [n.id, n]));
+      }
+      return appState._nodeMap;
+    }
+
+    function getEdgeMap() {
+      if (!appState._edgeMap) {
+        const m = new Map();
+        appState.edges.forEach(e => {
+          const k = e.from < e.to ? `${e.from}-${e.to}` : `${e.to}-${e.from}`;
+          m.set(k, e);
+        });
+        appState._edgeMap = m;
+      }
+      return appState._edgeMap;
+    }
+
     function getNodeById(id) {
-      return appState.nodes.find(n => n.id === id) || appState.nodes[0];
+      return getNodeMap().get(id) || appState.nodes[0];
     }
 
     function getEdgeWeight(edge, criteria = appState.weightCriteria) {
@@ -655,13 +710,13 @@
       let cost = 0;
       let efficient = 0;
       const edges = [];
+      const edgeMap = getEdgeMap();
 
       for (let i = 0; i < path.length - 1; i++) {
         const u = path[i];
         const v = path[i + 1];
-        const edge = appState.edges.find(
-          e => (e.from === u && e.to === v) || (e.from === v && e.to === u)
-        );
+        const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+        const edge = edgeMap.get(key);
         if (edge) {
           distance += edge.distance;
           time += edge.time;
@@ -678,6 +733,15 @@
         efficient: Math.round(efficient * 100) / 100,
         edges
       };
+    }
+
+    function getOrderedPathEdges(pathArr) {
+      const pairs = [];
+      if (!Array.isArray(pathArr) || pathArr.length < 2) return pairs;
+      for (let i = 0; i < pathArr.length - 1; i++) {
+        pairs.push([pathArr[i], pathArr[i + 1]]);
+      }
+      return pairs;
     }
 
     function findPathInTree(treeEdges, startId, goalId) {
@@ -878,7 +942,9 @@
 
         const m = calculatePathMetrics(path);
         highlightedEdges = m.edges;
-        summaryNote = `${getCriteriaInfo(criteria).short} terpendek (optimal)`;
+        const critInfo = getCriteriaInfo(criteria);
+        const critVal = criteria === 'cost' ? formatCurrency(m.cost) : criteria === 'time' ? `${m.time} mnt` : criteria === 'efficient' ? `${formatDecimal(m.efficient)} poin` : `${formatDecimal(m.distance)} km`;
+        summaryNote = `${critInfo.short} terpendek (${critVal})`;
         return {
           algoId, meta, found: path.length > 0, path,
           metrics: m, edgeCount: Math.max(0, path.length - 1),
@@ -1182,7 +1248,7 @@
       const visited = new Set([startId]);
       const currentPath = [startId];
 
-      const ENUM_LIMIT = 20000; // pengaman untuk graf besar
+      const ENUM_LIMIT = 4000; // pengaman untuk graf besar
       function dfsBacktrack(u) {
         if (allFound.length >= ENUM_LIMIT) return;
         if (u === goalId) {
@@ -1229,9 +1295,15 @@
       }));
     }
 
-    // Return all distinct alternative routes (sorted from best to longest)
+    // Return all distinct alternative routes (cached & sorted from best to longest)
     function getAlternativeRoutes(startId, goalId, criteria) {
-      return findAllSimplePaths(startId, goalId, criteria, 40);
+      const cacheKey = `${appState.graphVersion}|${startId}|${goalId}|${criteria}`;
+      const cached = appState._altRoutesCache.get(cacheKey);
+      if (cached) return cached;
+      const computed = findAllSimplePaths(startId, goalId, criteria, 40);
+      if (appState._altRoutesCache.size > 40) appState._altRoutesCache.clear();
+      appState._altRoutesCache.set(cacheKey, computed);
+      return computed;
     }
 
     // -----------------------------------------------------------------------
@@ -1274,6 +1346,21 @@
     function toggleAlgoDropdown() {
       appState.algoDropdownOpen = !appState.algoDropdownOpen;
       renderApp();
+    }
+
+    function closeAlgoDropdown() {
+      if (!appState.algoDropdownOpen) return;
+      appState.algoDropdownOpen = false;
+      renderApp();
+    }
+
+    function runActiveSimulation() {
+      appState.previewAltRoutePath = null;
+      const startObj = getNodeById(appState.startNode);
+      const goalObj = getNodeById(appState.goalNode);
+      const algoMeta = ALGORITHMS_META.find(a => a.id === appState.selectedAlgo);
+      renderApp();
+      showToast(`Simulasi ${algoMeta ? algoMeta.code : 'Graf'} dijalankan: ${startObj.shortName} → ${goalObj.shortName}`);
     }
 
     function adjustMapZoom(delta) {
@@ -1338,7 +1425,8 @@
       document.getElementById('print-student-name').textContent = appState.student.name;
       document.getElementById('print-student-nim').textContent = appState.student.nim;
       document.getElementById('print-student-prodi').textContent = `${appState.student.prodi} – ${appState.student.campus}`;
-      document.getElementById('print-active-params').textContent = `${startObj.shortName} (${startObj.id}) → ${goalObj.shortName} (${goalObj.id}) | ${algoMeta.code} | ${critInfo.label}`;
+      const altSuffix = appState.previewAltRoutePath ? ` | Pilihan: ${appState.previewAltRoutePath.join(' → ')}` : '';
+      document.getElementById('print-active-params').textContent = `${startObj.shortName} (${startObj.id}) → ${goalObj.shortName} (${goalObj.id}) | ${algoMeta.code} | ${critInfo.label}${altSuffix}`;
       document.getElementById('print-timestamp').textContent = 'Dicetak pada: ' + new Date().toLocaleString('id-ID');
 
       setTimeout(() => {
@@ -1395,41 +1483,67 @@
       `;
     }
 
+    function buildSvgArrowhead(x1, y1, x2, y2, fill = '#ffffff', stroke = '#1e3a8a') {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      if (len < 12) return '';
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      const ux = dx / len;
+      const uy = dy / len;
+      const px = -uy;
+      const py = ux;
+      const tipX = mx + ux * 6;
+      const tipY = my + uy * 6;
+      const backX = mx - ux * 4.5;
+      const backY = my - uy * 4.5;
+      const leftX = backX + px * 4.8;
+      const leftY = backY + py * 4.8;
+      const rightX = backX - px * 4.8;
+      const rightY = backY - py * 4.8;
+      return `<polygon points="${tipX.toFixed(1)},${tipY.toFixed(1)} ${leftX.toFixed(1)},${leftY.toFixed(1)} ${rightX.toFixed(1)},${rightY.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round"/>`;
+    }
+
     // -----------------------------------------------------------------------
     // 7. VISUAL COMPONENTS: SEMARANG ROUTE MAP & ABSTRACT GRAPH SVG
     // -----------------------------------------------------------------------
     function renderSemarangMapSVG(activeResult, altRoutes) {
+      if (window.L) {
+        appState._mapCtx = { activeResult, altRoutes };
+        return `<div data-leaflet-slot class="viz-contain isolate relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100"></div>`;
+      }
       const startObj = getNodeById(appState.startNode);
       const goalObj = getNodeById(appState.goalNode);
 
       const previewMetrics = appState.previewAltRoutePath
         ? calculatePathMetrics(appState.previewAltRoutePath)
         : null;
-      const primaryEdges = previewMetrics ? previewMetrics.edges : activeResult.highlightedEdges;
-      const primaryPath = appState.previewAltRoutePath || activeResult.path;
+      const primaryPath = appState.previewAltRoutePath || activeResult.path || [];
+      const primaryPathEdges = getOrderedPathEdges(primaryPath);
       const primarySig = primaryPath.join('-');
+      const isMstAlgo = !appState.previewAltRoutePath && (activeResult.algoId === 'prim' || activeResult.algoId === 'kruskal');
 
       const highlightedSet = new Set(
-        primaryEdges.map(([u, v]) => [u, v].sort().join('-'))
+        primaryPathEdges.map(([u, v]) => [u, v].sort().join('-'))
       );
+      const mstSet = isMstAlgo
+        ? new Set(activeResult.highlightedEdges.map(([u, v]) => [u, v].sort().join('-')))
+        : new Set();
 
-      // Filter alternative routes distinct from currently highlighted primary route (show up to 4 overlays on map)
+      // Filter alternative routes distinct from currently highlighted primary route (show up to 2 overlays)
       const secondaryRoutes = altRoutes
         .filter(r => r.path.join('-') !== primarySig)
-        .slice(0, 4);
+        .slice(0, 2);
 
       const altPalette = [
         { stroke: '#f59e0b', badgeBg: '#f59e0b', badgeSub: '#fef3c7', dyOffset: -26 },
-        { stroke: '#16a34a', badgeBg: '#16a34a', badgeSub: '#dcfce7', dyOffset: 24 },
-        { stroke: '#9333ea', badgeBg: '#9333ea', badgeSub: '#f3e8ff', dyOffset: -46 },
-        { stroke: '#0891b2', badgeBg: '#0891b2', badgeSub: '#cffafe', dyOffset: 44 }
+        { stroke: '#16a34a', badgeBg: '#16a34a', badgeSub: '#dcfce7', dyOffset: 24 }
       ];
 
       const secondaryEdgeSets = secondaryRoutes.map(r =>
         new Set(r.highlightedEdges.map(([u, v]) => [u, v].sort().join('-')))
       );
-
-      const scale = appState.mapZoom;
 
       const getPathMidpoint = (pathArr) => {
         if (!pathArr || pathArr.length === 0) return { x: 240, y: 140 };
@@ -1439,9 +1553,10 @@
 
       const primaryMid = getPathMidpoint(primaryPath);
       const primaryDisplayMetrics = previewMetrics || activeResult.metrics;
+      const pathNodeSet = new Set(primaryPath);
 
       return `
-        <div data-panzoom="map" class="relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-[#f6f4ee] select-none cursor-grab active:cursor-grabbing">
+        <div data-panzoom="map" class="viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-[#f6f4ee] select-none cursor-grab active:cursor-grabbing">
           <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
             <g class="pz-layer" transform="translate(${appState.pz.map.x} ${appState.pz.map.y}) scale(${appState.pz.map.k})">
             <rect width="440" height="520" fill="#f7f5ef"/>
@@ -1449,43 +1564,43 @@
             <text x="8" y="14" font-size="9" font-weight="600" fill="#5b8db3">Laut Jawa (utara)</text>
             <text x="8" y="512" font-size="8.5" fill="#94a3b8">Posisi dari koordinat nyata · skala seragam · Utara ↑</text>
 
-            <!-- All Graph Roads (Base Layer) -->
+            <!-- Base & Alternative Roads -->
             ${appState.edges.map(e => {
               const u = getNodeById(e.from);
               const v = getNodeById(e.to);
               const key = [e.from, e.to].sort().join('-');
-              const isPrimary = highlightedSet.has(key);
-
-              let stroke = '#cbd5e1';
-              let width = 3.2;
-              let extraClass = '';
-              if (isPrimary) {
-                stroke = '#2563eb';
-                width = 5.5;
-                extraClass = 'route-flow';
-              } else {
-                const secIdx = secondaryEdgeSets.findIndex(s => s.has(key));
-                if (secIdx !== -1) {
-                  stroke = altPalette[secIdx].stroke;
-                  width = 3.6;
-                }
+              if (highlightedSet.has(key)) return '';
+              if (mstSet.has(key)) {
+                return `<line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#10b981" stroke-width="3.6" stroke-linecap="round" opacity="0.8"/>`;
               }
+              const secIdx = secondaryEdgeSets.findIndex(s => s.has(key));
+              if (secIdx !== -1) {
+                return `<line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="${altPalette[secIdx].stroke}" stroke-width="2.8" stroke-dasharray="5 4" stroke-linecap="round" opacity="0.7"/>`;
+              }
+              return `<line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" opacity="0.75"/>`;
+            }).join('')}
+
+            <!-- Primary Route Highlight (Halo + White Casing + Solid Core + Direction Arrows) -->
+            ${primaryPathEdges.map(([fromId, toId]) => {
+              const u = getNodeById(fromId);
+              const v = getNodeById(toId);
               return `
-                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#ffffff" stroke-width="${width + 2.5}" stroke-linecap="round"/>
-                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" class="${extraClass}"/>
+                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#60a5fa" stroke-width="11" stroke-linecap="round" opacity="0.35"/>
+                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round"/>
+                <line x1="${u.mapX}" y1="${u.mapY}" x2="${v.mapX}" y2="${v.mapY}" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round"/>
+                ${buildSvgArrowhead(u.mapX, u.mapY, v.mapX, v.mapY)}
               `;
             }).join('')}
 
             <!-- Map Nodes -->
             ${appState.nodes.map(n => {
               if (n.id === appState.startNode || n.id === appState.goalNode) return '';
+              const onPath = pathNodeSet.has(n.id);
               return `
-                <circle cx="${n.mapX}" cy="${n.mapY}" r="5.5" fill="#ffffff" stroke="#475569" stroke-width="2"/>
-                <text x="${n.side === 'l' ? n.mapX - 9 : n.mapX + 9}" y="${n.mapY + 3}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="9.5" font-weight="600" fill="#475569">${n.shortName}</text>
+                <circle cx="${n.mapX}" cy="${n.mapY}" r="${onPath ? 6.5 : 4.5}" fill="${onPath ? '#dbeafe' : '#ffffff'}" stroke="${onPath ? '#1d4ed8' : '#64748b'}" stroke-width="${onPath ? 2.5 : 1.5}"/>
+                <text x="${n.side === 'l' ? n.mapX - 9 : n.mapX + 9}" y="${n.mapY + 3}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="${onPath ? '10' : '9'}" font-weight="${onPath ? '700' : '500'}" fill="${onPath ? '#1e3a8a' : '#64748b'}">${n.shortName}</text>
               `;
             }).join('')}
-
-            
 
             <!-- Primary Route Callout Pill -->
             ${primaryPath.length > 1 ? `
@@ -1497,7 +1612,7 @@
             ` : ''}
 
             <!-- Top Alternative Routes Callout Pills -->
-            ${secondaryRoutes.slice(0, 2).map((altR, idx) => {
+            ${secondaryRoutes.map((altR, idx) => {
               const pal = altPalette[idx];
               const mid = getPathMidpoint(altR.path);
               const bx = Math.min(310, Math.max(6, mid.x - 62 + (idx === 0 ? -60 : 60)));
@@ -1516,8 +1631,11 @@
               <circle cx="0" cy="0" r="6" fill="#2563eb" opacity="0.25"/>
               <path d="M0 -24 C-6.5 -24 -11.5 -19 -11.5 -12.5 C-11.5 -4.5 0 4 0 4 C0 4 11.5 -4.5 11.5 -12.5 C11.5 -19 6.5 -24 0 -24 Z" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
               <circle cx="0" cy="-13" r="4" fill="#ffffff"/>
-              <rect x="-24" y="6" width="52" height="16" rx="4" fill="#ffffff" opacity="0.9"/>
-              <text x="2" y="17" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1e3a8a">${startObj.shortName}</text>
+              ${(() => {
+                const lw = Math.max(52, startObj.shortName.length * 6.4 + 12);
+                const lx = Math.max(4 - startObj.mapX, Math.min(436 - startObj.mapX - lw, -lw / 2));
+                return `<rect x="${lx}" y="6" width="${lw}" height="16" rx="4" fill="#2563eb"/><text x="${lx + lw / 2}" y="17" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">${startObj.shortName}</text>`;
+              })()}
             </g>
 
             <!-- Goal Pin Marker -->
@@ -1525,8 +1643,12 @@
               <circle cx="0" cy="0" r="6" fill="#ef4444" opacity="0.25"/>
               <path d="M0 -24 C-6.5 -24 -11.5 -19 -11.5 -12.5 C-11.5 -4.5 0 4 0 4 C0 4 11.5 -4.5 11.5 -12.5 C11.5 -19 6.5 -24 0 -24 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
               <circle cx="0" cy="-13" r="4" fill="#ffffff"/>
-              <rect x="13" y="-18" width="76" height="17" rx="4" fill="#ffffff" opacity="0.92"/>
-              <text x="51" y="-6" text-anchor="middle" font-size="10.5" font-weight="800" fill="#991b1b">${goalObj.shortName}</text>
+              ${(() => {
+                const lw = Math.max(66, goalObj.shortName.length * 6.4 + 14);
+                const placeLeft = goalObj.mapX + 13 + lw > 436;
+                const lx = placeLeft ? -13 - lw : 13;
+                return `<rect x="${lx}" y="-18" width="${lw}" height="17" rx="4" fill="#dc2626"/><text x="${lx + lw / 2}" y="-6" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">${goalObj.shortName}</text>`;
+              })()}
             </g>
           </g>
           </svg>
@@ -1536,58 +1658,101 @@
       `;
     }
 
-    function renderAbstractGraphSVG(activeResult, interactive = false) {
+    function renderAbstractGraphSVG(activeResult, interactive = false, stepFocus = null) {
       const previewMetrics = appState.previewAltRoutePath
         ? calculatePathMetrics(appState.previewAltRoutePath)
         : null;
-      const activeEdges = previewMetrics ? previewMetrics.edges : activeResult.highlightedEdges;
       const activePath = appState.previewAltRoutePath || activeResult.path || [];
+      const activePathEdges = getOrderedPathEdges(activePath);
+      const isMstAlgo = !appState.previewAltRoutePath && (activeResult.algoId === 'prim' || activeResult.algoId === 'kruskal');
 
-      const highlightedSet = new Set(
-        activeEdges.map(([u, v]) => [u, v].sort().join('-'))
-      );
+      let stepNodeId = null;
+      let stepEdgeKey = null;
+      if (stepFocus) {
+        const edgeMatch = String(stepFocus).match(/^([A-Z])–([A-Z])$/);
+        const pivotMatch = String(stepFocus).match(/Pivot k=([A-Z])/);
+        const nodeMatch = String(stepFocus).match(/^([A-Z])\b/);
+        if (edgeMatch) {
+          stepEdgeKey = edgeMatch[1] < edgeMatch[2] ? `${edgeMatch[1]}-${edgeMatch[2]}` : `${edgeMatch[2]}-${edgeMatch[1]}`;
+        } else if (pivotMatch) {
+          stepNodeId = pivotMatch[1];
+        } else if (nodeMatch) {
+          stepNodeId = nodeMatch[1];
+        }
+      }
+
+      const pathEdgeDir = new Map();
+      activePathEdges.forEach(([u, v]) => {
+        const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+        pathEdgeDir.set(key, [u, v]);
+      });
+      const mstSet = isMstAlgo
+        ? new Set(activeResult.highlightedEdges.map(([u, v]) => [u, v].sort().join('-')))
+        : new Set();
       const pathNodeSet = new Set(activePath);
 
       return `
-        <div data-panzoom="graph" class="relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center select-none cursor-grab active:cursor-grabbing">
+        <div data-panzoom="graph" class="viz-contain relative w-full h-[420px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center select-none cursor-grab active:cursor-grabbing">
           <svg viewBox="0 0 440 520" class="w-full h-full" style="touch-action:none">
-            <defs>
-              <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-            </defs>
             <g class="pz-layer" transform="translate(${appState.pz.graph.x} ${appState.pz.graph.y}) scale(${appState.pz.graph.k})">
 
-            <!-- Edges with Weight Labels -->
+            <!-- Inactive & MST Edges -->
             ${appState.edges.map(e => {
+              const key = e.from < e.to ? `${e.from}-${e.to}` : `${e.to}-${e.from}`;
+              if (pathEdgeDir.has(key)) return '';
               const u = getNodeById(e.from);
               const v = getNodeById(e.to);
-              const key = [e.from, e.to].sort().join('-');
-              const isActive = highlightedSet.has(key);
+              const isMst = mstSet.has(key);
               const midX = (u.graphX + v.graphX) / 2;
               const midY = (u.graphY + v.graphY) / 2;
-
               const dx = v.graphX - u.graphX;
               const dy = v.graphY - u.graphY;
               const len = Math.hypot(dx, dy) || 1;
-              const normX = -dy / len;
-              const normY = dx / len;
-              const labelX = midX + normX * 11;
-              const labelY = midY + normY * 11;
-
+              const labelX = midX + (-dy / len) * 11;
+              const labelY = midY + (dx / len) * 11;
               const weightText = formatWeightDisplay(getEdgeWeight(e, appState.weightCriteria), appState.weightCriteria);
+
+              const isStepEdge = stepEdgeKey === key;
+              return `
+                <g>
+                  ${isStepEdge ? `<line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}" stroke="#f59e0b" stroke-width="8" stroke-linecap="round" opacity="0.45"/>` : ''}
+                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}"
+                        stroke="${isStepEdge ? '#d97706' : isMst ? '#10b981' : '#cbd5e1'}"
+                        stroke-width="${isStepEdge ? 3.8 : isMst ? 2.8 : 1.5}"
+                        stroke-linecap="round"/>
+                  <rect x="${labelX - 20}" y="${labelY - 7.5}" width="40" height="14" rx="4" fill="#ffffff" opacity="0.9"/>
+                  <text x="${labelX}" y="${labelY + 2.8}" text-anchor="middle" font-size="9"
+                        font-weight="${isStepEdge || isMst ? '700' : '500'}"
+                        fill="${isStepEdge ? '#b45309' : isMst ? '#047857' : '#64748b'}">${weightText}</text>
+                </g>
+              `;
+            }).join('')}
+
+            <!-- Active Route Highlight Edges (Halo + Casing + Core + Directional Arrow) -->
+            ${activePathEdges.map(([fromId, toId]) => {
+              const u = getNodeById(fromId);
+              const v = getNodeById(toId);
+              const key = fromId < toId ? `${fromId}-${toId}` : `${toId}-${fromId}`;
+              const edge = getEdgeMap().get(key);
+              const midX = (u.graphX + v.graphX) / 2;
+              const midY = (u.graphY + v.graphY) / 2;
+              const dx = v.graphX - u.graphX;
+              const dy = v.graphY - u.graphY;
+              const len = Math.hypot(dx, dy) || 1;
+              const labelX = midX + (-dy / len) * 13;
+              const labelY = midY + (dx / len) * 13;
+              const weightText = edge ? formatWeightDisplay(getEdgeWeight(edge, appState.weightCriteria), appState.weightCriteria) : '';
 
               return `
                 <g>
-                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}"
-                        stroke="${isActive ? '#2563eb' : '#64748b'}"
-                        stroke-width="${isActive ? 3.8 : 1.7}"
-                        ${isActive ? 'filter="url(#glow-blue)"' : ''}/>
-                  <rect x="${labelX - 21}" y="${labelY - 8}" width="42" height="15" rx="4" fill="#ffffff" opacity="0.92"/>
-                  <text x="${labelX}" y="${labelY + 3}" text-anchor="middle" font-size="9.5"
-                        font-weight="${isActive ? '800' : '600'}"
-                        fill="${isActive ? '#1d4ed8' : '#334155'}">${weightText}</text>
+                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}" stroke="#93c5fd" stroke-width="10" stroke-linecap="round" opacity="0.45"/>
+                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}" stroke="#ffffff" stroke-width="6.5" stroke-linecap="round"/>
+                  <line x1="${u.graphX}" y1="${u.graphY}" x2="${v.graphX}" y2="${v.graphY}" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/>
+                  ${buildSvgArrowhead(u.graphX, u.graphY, v.graphX, v.graphY)}
+                  ${weightText ? `
+                    <rect x="${labelX - 22}" y="${labelY - 8.5}" width="44" height="16" rx="5" fill="#eff6ff" stroke="#2563eb" stroke-width="1"/>
+                    <text x="${labelX}" y="${labelY + 3}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#1e40af">${weightText}</text>
+                  ` : ''}
                 </g>
               `;
             }).join('')}
@@ -1598,29 +1763,37 @@
               const isGoal = n.id === appState.goalNode;
               const isOnPath = pathNodeSet.has(n.id);
 
-              let fill = '#dbeafe';
-              let stroke = '#2563eb';
-              let textColor = '#1e3a8a';
+              let fill = '#f8fafc';
+              let stroke = '#94a3b8';
+              let textColor = '#475569';
+              let r = 10;
 
               if (isStart) {
                 fill = '#2563eb';
-                stroke = '#1d4ed8';
+                stroke = '#ffffff';
                 textColor = '#ffffff';
+                r = 12.5;
               } else if (isGoal) {
                 fill = '#ef4444';
-                stroke = '#b91c1c';
+                stroke = '#ffffff';
                 textColor = '#ffffff';
+                r = 12.5;
               } else if (isOnPath) {
-                fill = '#bfdbfe';
+                fill = '#dbeafe';
                 stroke = '#1d4ed8';
                 textColor = '#1e3a8a';
+                r = 11.5;
               }
 
+              const isStepNode = stepNodeId === n.id;
               return `
-                <g class="cursor-pointer transition-transform" onclick="handleGraphNodeClick('${n.id}')">
-                  <circle cx="${n.graphX}" cy="${n.graphY}" r="11" fill="${fill}" stroke="${stroke}" stroke-width="${isStart || isGoal ? 3 : 2}"/>
-                  <text x="${n.graphX}" y="${n.graphY + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="${textColor}">${n.id}</text>
-                  <text x="${n.side === 'l' ? n.graphX - 15 : n.graphX + 15}" y="${n.graphY + 3.5}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="9" font-weight="700" fill="#334155">${n.shortName}</text>
+                <g class="cursor-pointer" onclick="handleGraphNodeClick('${n.id}')">
+                  ${isStepNode ? `<circle cx="${n.graphX}" cy="${n.graphY}" r="18" fill="none" stroke="#f59e0b" stroke-width="3" opacity="0.9"/>` : ''}
+                  ${isStart ? `<circle cx="${n.graphX}" cy="${n.graphY}" r="16.5" fill="#2563eb" opacity="0.22"/>` : ''}
+                  ${isGoal ? `<circle cx="${n.graphX}" cy="${n.graphY}" r="16.5" fill="#ef4444" opacity="0.22"/>` : ''}
+                  <circle cx="${n.graphX}" cy="${n.graphY}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isStart || isGoal || isOnPath ? 2.8 : 1.8}"/>
+                  <text x="${n.graphX}" y="${n.graphY + 3.8}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${textColor}">${n.id}</text>
+                  <text x="${n.side === 'l' ? n.graphX - 16 : n.graphX + 16}" y="${n.graphY + 3.5}" text-anchor="${n.side === 'l' ? 'end' : 'start'}" font-size="9" font-weight="${isStart || isGoal || isOnPath ? '800' : '600'}" fill="${isStart ? '#1d4ed8' : isGoal ? '#b91c1c' : isOnPath ? '#1e3a8a' : '#64748b'}">${n.shortName}</text>
                 </g>
               `;
             }).join('')}
@@ -1724,30 +1897,34 @@
             </div>
 
             <!-- Algoritma (7 Pilihan) -->
-            <div class="space-y-1.5 relative">
-              <label class="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-700">
+            <div class="space-y-1.5 relative" data-algo-dropdown>
+              <label class="flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-slate-700">
                 <span class="flex items-center gap-1.5"><span class="text-brand-600">🔗</span> Algoritma</span>
-                <span class="text-[11px] font-medium text-brand-600">7 Algoritma Tersedia</span>
+                <span class="text-[11px] font-medium text-brand-600 shrink-0">7 Algoritma Tersedia</span>
               </label>
 
-              <button type="button" onclick="toggleAlgoDropdown()" class="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white hover:border-brand-500 px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold text-slate-800 shadow-sm transition">
-                <span class="truncate">${selectedAlgoMeta.shortLabel}</span>
+              <button id="algo-dropdown-trigger" type="button" onclick="toggleAlgoDropdown()"
+                      aria-haspopup="listbox" aria-expanded="${appState.algoDropdownOpen}"
+                      class="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white hover:border-brand-500 px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold text-slate-800 shadow-sm transition">
+                <span class="min-w-0 truncate">${selectedAlgoMeta.shortLabel}</span>
                 <svg class="w-4 h-4 text-slate-500 shrink-0 transition-transform ${appState.algoDropdownOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
 
-              <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
+              <div role="listbox" aria-labelledby="algo-dropdown-trigger"
+                   class="${appState.algoDropdownOpen ? '' : 'hidden'} rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-y divide-slate-100">
                 ${ALGORITHMS_META.map(algo => {
                   const isSelected = algo.id === appState.selectedAlgo;
                   return `
-                    <button type="button" onclick="updateSimulationParams({ selectedAlgo: '${algo.id}' })"
+                    <button type="button" role="option" aria-selected="${isSelected}"
+                            onclick="updateSimulationParams({ selectedAlgo: '${algo.id}' })"
                             class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition ${isSelected ? 'bg-blue-100/90 text-blue-950 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'}">
                       <span class="w-4 flex items-center justify-center shrink-0">
                         ${isSelected ? '<span class="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center">✓</span>' : ''}
                       </span>
                       ${getAlgoBadgeIcon(algo.id)}
-                      <span class="truncate">${algo.shortLabel}</span>
+                      <span class="min-w-0 leading-snug">${algo.shortLabel}</span>
                     </button>
                   `;
                 }).join('')}
@@ -1779,7 +1956,7 @@
 
             <!-- Primary Action Buttons -->
             <div class="grid grid-cols-2 gap-2.5 pt-2 no-print">
-              <button type="button" onclick="showToast('Simulasi ${selectedAlgoMeta.code} dijalankan: ${startObj.shortName} → ${goalObj.shortName}')"
+              <button type="button" onclick="runActiveSimulation()"
                       class="btn-primary-gradient text-white font-semibold text-xs sm:text-sm py-2.5 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 transition active:scale-95">
                 <span>▶</span>
                 <span>Jalankan</span>
@@ -1838,7 +2015,7 @@
             </section>
 
             <!-- ALL POSSIBLE ALTERNATIVE ROUTES EXPLORER (LINTASAN SEDERHANA) -->
-            <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+            <section class="dashboard-section-defer bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                   <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
@@ -1873,24 +2050,30 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100">
-                    ${altRoutes.map(alt => {
+                    ${altRoutes.length === 0 ? `
+                      <tr>
+                        <td colspan="7" class="py-4 px-3 text-center text-slate-500">
+                          Tidak ada lintasan yang menghubungkan ${startObj.shortName} ke ${goalObj.shortName}.
+                        </td>
+                      </tr>
+                    ` : altRoutes.map(alt => {
                       const sig = alt.path.join('-');
                       const isCurrentlyDisplayed = displayedPath.join('-') === sig;
                       const encodedPath = encodeURIComponent(JSON.stringify(alt.path));
                       return `
                         <tr onclick="selectAlternativeRoute('${encodedPath}')"
                             class="cursor-pointer transition ${isCurrentlyDisplayed ? 'bg-blue-50/90 font-bold text-blue-950' : 'hover:bg-slate-50 text-slate-700'}">
-                          <td class="py-2 px-3">
+                          <td class="py-2 px-3 whitespace-nowrap">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${alt.rank === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}">
                               Rute #${alt.rank}
                             </span>
                           </td>
-                          <td class="py-2 px-3 font-mono">${alt.path.join(' → ')}</td>
-                          <td class="py-2 px-3 text-center">${formatDecimal(alt.metrics.distance)} km</td>
-                          <td class="py-2 px-3 text-center">${alt.metrics.time} mnt</td>
-                          <td class="py-2 px-3 text-right">${formatCurrency(alt.metrics.cost)}</td>
-                          <td class="py-2 px-3 text-center">${alt.edgeCount}</td>
-                          <td class="py-2 px-3 text-center no-print">
+                          <td class="py-2 px-3 font-mono break-words min-w-[160px]">${alt.path.join(' → ')}</td>
+                          <td class="py-2 px-3 text-center whitespace-nowrap">${formatDecimal(alt.metrics.distance)} km</td>
+                          <td class="py-2 px-3 text-center whitespace-nowrap">${alt.metrics.time} mnt</td>
+                          <td class="py-2 px-3 text-right whitespace-nowrap">${formatCurrency(alt.metrics.cost)}</td>
+                          <td class="py-2 px-3 text-center whitespace-nowrap">${alt.edgeCount}</td>
+                          <td class="py-2 px-3 text-center whitespace-nowrap no-print">
                             <span class="text-[11px] font-semibold ${isCurrentlyDisplayed ? 'text-blue-700' : 'text-brand-600 hover:underline'}">
                               ${isCurrentlyDisplayed ? '● Ditampilkan' : 'Sorot Peta'}
                             </span>
@@ -1922,12 +2105,12 @@
                     <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 flex items-start gap-3">
                       <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 font-bold shadow-sm mt-0.5">✓</div>
                       <div class="min-w-0 flex-1 space-y-1.5">
-                        <div class="font-bold text-emerald-950 text-xs sm:text-sm">
+                        <div class="font-bold text-emerald-950 text-xs sm:text-sm break-words">
                           ${appState.previewAltRoutePath
                             ? `Rute Alternatif Pilihan (${displayedPath.join(' → ')})`
                             : `Rute ${selectedAlgoMeta.code} (${getCriteriaInfo(appState.weightCriteria).short} ${appState.selectedAlgo === 'bfs' ? 'Min Sisi' : appState.selectedAlgo === 'prim' || appState.selectedAlgo === 'kruskal' ? 'via MST' : 'Terpendek'})`}
                         </div>
-                        <div class="inline-block max-w-full bg-white border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-2xs truncate">
+                        <div class="inline-block max-w-full bg-white border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-2xs break-words">
                           ${humanRouteLabels}
                         </div>
                       </div>
@@ -1941,32 +2124,32 @@
 
                 <!-- 4 Key Route Metrics -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
-                    <span class="text-lg">🛣️</span>
-                    <div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
+                    <span class="text-lg shrink-0">🛣️</span>
+                    <div class="min-w-0">
                       <div class="text-[11px] text-slate-500">Jarak</div>
                       <div class="text-xs sm:text-sm font-extrabold text-slate-900">${formatDecimal(displayedMetrics.distance)} km</div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
-                    <span class="text-lg">🕒</span>
-                    <div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
+                    <span class="text-lg shrink-0">🕒</span>
+                    <div class="min-w-0">
                       <div class="text-[11px] text-slate-500">Waktu</div>
                       <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedMetrics.time} menit</div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
-                    <span class="text-lg">🔗</span>
-                    <div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
+                    <span class="text-lg shrink-0">🔗</span>
+                    <div class="min-w-0">
                       <div class="text-[11px] text-slate-500">Jumlah Sisi</div>
                       <div class="text-xs sm:text-sm font-extrabold text-slate-900">${displayedEdgeCount}</div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50">
-                    <span class="text-lg">📍</span>
-                    <div>
-                      <div class="text-[11px] text-slate-500">Node Dikunjungi</div>
-                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${activeResult.visitedCount}</div>
+                  <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 min-w-0">
+                    <span class="text-lg shrink-0">📍</span>
+                    <div class="min-w-0">
+                      <div class="text-[11px] text-slate-500">${appState.previewAltRoutePath ? 'Simpul Rute' : 'Node Dikunjungi'}</div>
+                      <div class="text-xs sm:text-sm font-extrabold text-slate-900">${appState.previewAltRoutePath ? displayedPath.length : activeResult.visitedCount}</div>
                     </div>
                   </div>
                 </div>
@@ -1993,9 +2176,9 @@
                     <tbody class="divide-y divide-slate-100">
                       ${activeResult.steps.map(s => `
                         <tr class="${s.isGoal ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
-                          <td class="py-1.5 px-2.5 text-center font-mono">${s.step}</td>
-                          <td class="py-1.5 px-2.5 font-bold">${s.focus}</td>
-                          <td class="py-1.5 px-2.5 font-mono text-[11px]">${s.detail}</td>
+                          <td class="py-1.5 px-2.5 text-center font-mono whitespace-nowrap">${s.step}</td>
+                          <td class="py-1.5 px-2.5 font-bold whitespace-nowrap">${s.focus}</td>
+                          <td class="py-1.5 px-2.5 font-mono text-[11px] break-words">${s.detail}</td>
                         </tr>
                       `).join('')}
                     </tbody>
@@ -2005,7 +2188,7 @@
             </div>
 
             <!-- BOTTOM ROW: PERBANDINGAN BEBERAPA ALGORITMA -->
-            <section class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
+            <section class="dashboard-section-defer bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
                   <span class="text-brand-600">📊</span> Perbandingan Beberapa Algoritma
@@ -2033,11 +2216,11 @@
                       return `
                         <tr onclick="updateSimulationParams({ selectedAlgo: '${row.algoId}' })"
                             class="cursor-pointer transition ${isCurrent ? 'bg-emerald-100/80 font-bold text-emerald-950' : 'hover:bg-slate-50 text-slate-700'}">
-                          <td class="py-2.5 px-3 font-bold">${row.meta.code}</td>
-                          <td class="py-2.5 px-3 font-mono">${row.found ? row.path.join(' → ') : '-'}</td>
-                          <td class="py-2.5 px-3 text-center">${row.found ? formatDecimal(row.metrics.distance) : '-'}</td>
-                          <td class="py-2.5 px-3 text-center">${row.found ? row.metrics.time : '-'}</td>
-                          <td class="py-2.5 px-3 text-center">${row.visitedCount}</td>
+                          <td class="py-2.5 px-3 font-bold whitespace-nowrap">${row.meta.code}</td>
+                          <td class="py-2.5 px-3 font-mono break-words min-w-[160px]">${row.found ? row.path.join(' → ') : '-'}</td>
+                          <td class="py-2.5 px-3 text-center whitespace-nowrap">${row.found ? formatDecimal(row.metrics.distance) : '-'}</td>
+                          <td class="py-2.5 px-3 text-center whitespace-nowrap">${row.found ? row.metrics.time : '-'}</td>
+                          <td class="py-2.5 px-3 text-center whitespace-nowrap">${row.visitedCount}</td>
                           <td class="py-2.5 px-3">${row.summaryNote}</td>
                         </tr>
                       `;
@@ -2159,12 +2342,12 @@
               <div class="max-h-[190px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
                 ${appState.edges.map(e => `
                   <div class="p-2.5 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
-                    <div>
+                    <div class="min-w-0">
                       <span class="font-bold text-brand-900">${e.from} ↔ ${e.to}</span>
-                      <span class="text-slate-500 ml-1.5">${formatDecimal(e.distance)} km • ${e.time} mnt • ${formatCurrency(e.cost)}</span>
+                      <span class="text-slate-500 ml-1.5 break-words">${formatDecimal(e.distance)} km • ${e.time} mnt • ${formatCurrency(e.cost)}</span>
                     </div>
-                    <div class="flex items-center gap-1 no-print">
-                      <button type="button" onclick="simulateTrafficOnEdge('${e.id}')" class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-semibold" title="Tambah +2 km & +8 mnt (Simulasi Macet)">
+                    <div class="flex items-center gap-1 shrink-0 no-print">
+                      <button type="button" onclick="simulateTrafficOnEdge('${e.id}')" class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-semibold" title="Tambah +8 mnt (Simulasi Macet)">
                         +Macet
                       </button>
                       <button type="button" onclick="deleteEdgeById('${e.id}')" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold" title="Hapus Sisi">
@@ -2180,7 +2363,7 @@
           <!-- Adjacency Matrix & Degree Sequence Table -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <div class="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
-              <h3 class="font-bold text-slate-900 text-base">Matriks Ketetanggaan Berbobot (Weighted Adjacency Matrix)</h3>
+              <h3 class="font-bold text-slate-900 text-base">Matriks Ketetanggaan Berbobot (${getCriteriaInfo(appState.weightCriteria).label})</h3>
               <div class="overflow-x-auto rounded-xl border border-slate-200">
                 <table class="w-full text-center border-collapse text-xs font-mono">
                   <thead class="bg-slate-100 text-slate-700 font-bold">
@@ -2270,6 +2453,7 @@
         });
         showToast(`Ruas baru ${from} ↔ ${to} ditambahkan ke graf!`);
       }
+      invalidateGraphCaches();
       renderApp();
     }
 
@@ -2277,6 +2461,7 @@
       const edge = appState.edges.find(e => e.id === edgeId);
       if (edge) {
         edge.time += 8; // macet hanya menambah waktu tempuh; jarak & tarif tetap
+        invalidateGraphCaches();
         showToast(`Simulasi macet pada ${edge.from}–${edge.to}: waktu +8 mnt`, 'info');
         renderApp();
       }
@@ -2288,6 +2473,7 @@
         return;
       }
       appState.edges = appState.edges.filter(e => e.id !== edgeId);
+      invalidateGraphCaches();
       showToast('Sisi berhasil dihapus dari graf.', 'info');
       renderApp();
     }
@@ -2298,6 +2484,7 @@
       appState.startNode = 'A';
       appState.goalNode = 'G';
       appState.previewAltRoutePath = null;
+      invalidateGraphCaches();
       showToast('Graf Kota Semarang dikembalikan ke kondisi awal!');
       renderApp();
     }
@@ -2363,11 +2550,11 @@
           <!-- Interactive Step-by-Step Playback & Visual Graph -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <div class="lg:col-span-6 bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 space-y-3">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-bold text-slate-900 text-base">Visualisasi Hasil (${meta.code})</h3>
-                <span class="text-xs font-bold text-brand-700">${activeResult.found ? activeResult.path.join(' → ') : 'Tidak ada rute'}</span>
+                <span class="text-xs font-bold text-brand-700 break-words">${activeResult.found ? activeResult.path.join(' → ') : 'Tidak ada rute'}</span>
               </div>
-              ${renderAbstractGraphSVG(activeResult, false)}
+              ${renderAbstractGraphSVG(activeResult, false, currentStepObj.focus)}
             </div>
 
             <!-- Step Scrubber & Trace Table -->
@@ -2400,9 +2587,9 @@
                   <tbody class="divide-y divide-slate-100">
                     ${activeResult.steps.map((s, idx) => `
                       <tr onclick="jumpToAlgoStep(${idx})" class="cursor-pointer ${idx === clampedIdx ? 'bg-brand-100 font-bold text-brand-950' : s.isGoal ? 'bg-emerald-50 text-emerald-900' : 'hover:bg-slate-50 text-slate-700'}">
-                        <td class="py-1.5 px-2.5 text-center font-mono">${s.step}</td>
-                        <td class="py-1.5 px-2.5 font-bold">${s.focus}</td>
-                        <td class="py-1.5 px-2.5 font-mono text-[11px]">${s.detail}</td>
+                        <td class="py-1.5 px-2.5 text-center font-mono whitespace-nowrap">${s.step}</td>
+                        <td class="py-1.5 px-2.5 font-bold whitespace-nowrap">${s.focus}</td>
+                        <td class="py-1.5 px-2.5 font-mono text-[11px] break-words">${s.detail}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -2494,7 +2681,24 @@
         runAlgorithm(meta.id, appState.startNode, appState.goalNode, appState.weightCriteria)
       );
 
-      const maxDist = Math.max(...allResults.map(r => r.metrics.distance || 1), 1);
+      const crit = appState.weightCriteria;
+      const critInfo = getCriteriaInfo(crit);
+      const getCritVal = (r) => {
+        if (!r.found) return 0;
+        if (crit === 'time') return r.metrics.time;
+        if (crit === 'cost') return r.metrics.cost;
+        if (crit === 'efficient') return r.metrics.efficient;
+        return r.metrics.distance;
+      };
+      const formatCritVal = (r) => {
+        if (!r.found) return 'N/A';
+        if (crit === 'time') return `${r.metrics.time} mnt`;
+        if (crit === 'cost') return formatCurrency(r.metrics.cost);
+        if (crit === 'efficient') return `${formatDecimal(r.metrics.efficient)} poin`;
+        return `${formatDecimal(r.metrics.distance)} km`;
+      };
+
+      const maxCrit = Math.max(...allResults.map(r => getCritVal(r) || 1), 1);
       const maxVisited = Math.max(...allResults.map(r => r.visitedCount || 1), 1);
 
       const dijkstraRes = allResults.find(r => r.algoId === 'dijkstra');
@@ -2513,7 +2717,9 @@
             <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-emerald-500">
               <div class="text-xs font-bold text-emerald-700 uppercase">Rute Bobot Paling Optimal</div>
               <div class="text-base font-extrabold text-slate-900 mt-1">
-                Dijkstra & A* (${formatDecimal(dijkstraRes.metrics.distance)} km • ${dijkstraRes.metrics.time} mnt)
+                ${dijkstraRes.found
+                  ? `Dijkstra & A* (${formatCritVal(dijkstraRes)}${crit !== 'distance' ? ` • ${formatDecimal(dijkstraRes.metrics.distance)} km` : ` • ${dijkstraRes.metrics.time} mnt`})`
+                  : 'Dijkstra & A* (Tidak terhubung)'}
               </div>
               <p class="text-xs text-slate-600 mt-1">
                 A* menemukan rute optimal yang sama dengan mengekspansi <strong>${astarRes.visitedCount} simpul</strong> dibanding Dijkstra (<strong>${dijkstraRes.visitedCount} simpul</strong>).
@@ -2522,7 +2728,7 @@
             <div class="bg-white rounded-2xl p-4 card-shadow border-l-4 border-blue-500">
               <div class="text-xs font-bold text-blue-700 uppercase">Transit / Sisi Paling Sedikit</div>
               <div class="text-base font-extrabold text-slate-900 mt-1">
-                BFS (${bfsRes.edgeCount} Sisi • ${formatDecimal(bfsRes.metrics.distance)} km)
+                ${bfsRes.found ? `BFS (${bfsRes.edgeCount} Sisi • ${formatDecimal(bfsRes.metrics.distance)} km)` : 'BFS (Tidak terhubung)'}
               </div>
               <p class="text-xs text-slate-600 mt-1">
                 BFS meminimalkan jumlah persimpangan yang dilewati tanpa mempertimbangkan bobot jarak atau waktu tempuh.
@@ -2542,16 +2748,16 @@
           <!-- Visual Bar Charts -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
-              <h3 class="font-bold text-slate-900 text-sm sm:text-base">Grafik Perbandingan Jarak Rute (km)</h3>
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">Grafik Perbandingan Bobot Rute (${critInfo.label})</h3>
               <div class="space-y-2.5 pt-1">
                 ${allResults.map(r => {
-                  const pct = r.found ? Math.min(100, Math.round((r.metrics.distance / maxDist) * 100)) : 0;
+                  const pct = r.found ? Math.min(100, Math.round((getCritVal(r) / maxCrit) * 100)) : 0;
                   const isSel = r.algoId === appState.selectedAlgo;
                   return `
                     <div class="space-y-1">
-                      <div class="flex justify-between text-xs">
+                      <div class="flex justify-between gap-2 text-xs">
                         <span class="font-bold ${isSel ? 'text-brand-700' : 'text-slate-700'}">${r.meta.code} ${isSel ? '(Aktif)' : ''}</span>
-                        <span class="font-mono font-semibold text-slate-800">${r.found ? formatDecimal(r.metrics.distance) + ' km' : 'N/A'}</span>
+                        <span class="font-mono font-semibold text-slate-800">${formatCritVal(r)}</span>
                       </div>
                       <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500 ${isSel ? 'bg-brand-600' : 'bg-blue-500'}" style="width: ${pct}%"></div>
@@ -2586,7 +2792,7 @@
 
           <!-- Full 7-Algorithm Comparison Table -->
           <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="font-bold text-slate-900 text-base">Tabel Lengkap Hasil Percobaan 7 Algoritma</h3>
               <span class="text-xs text-slate-500">Klik baris untuk memilih algoritma aktif</span>
             </div>
@@ -2705,7 +2911,7 @@
         <div class="space-y-5">
           <div class="bg-white rounded-2xl p-5 card-shadow border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg sm:text-xl font-bold text-slate-900">Tugas & Challenge Praktikum Graf</h2>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900">Skor: ${completedCount}/${LAB_TASKS.length} Lab • ${correctQuizCount}/${QUIZ_QUESTIONS.length} Kuis</span>
               </div>
@@ -2890,9 +3096,10 @@
       e.preventDefault();
       appState.student.name = document.getElementById('stu-name').value.trim() || 'Farel';
       appState.student.nim = document.getElementById('stu-nim').value.trim();
-      appState.student.prodi = document.getElementById('stu-prodi').value.trim();
+      appState.student.prodi = document.getElementById('stu-prodi').value.trim() || 'D4 TRK';
       appState.student.campus = document.getElementById('stu-campus').value.trim();
-      document.getElementById('header-student-name').textContent = `${appState.student.name} • D4 TRK`;
+      const shortProdi = appState.student.prodi.replace(/^D4\s+Teknologi\s+Rekayasa\s+Komputer$/i, 'D4 TRK');
+      document.getElementById('header-student-name').textContent = `${appState.student.name} • ${shortProdi}`;
       showToast('Identitas mahasiswa berhasil disimpan untuk header cetak PDF!');
       renderApp();
     }
@@ -2988,7 +3195,15 @@
         const svg = box.querySelector('svg');
         if (!svg) return;
         const pts = new Map();
-        let start = null, moved = false, lastDist = 0;
+        let start = null, moved = false, lastDist = 0, cachedScale = 1, rafId = 0;
+
+        const scheduleApply = () => {
+          if (rafId) return;
+          rafId = requestAnimationFrame(() => {
+            rafId = 0;
+            pzApply(box, name);
+          });
+        };
 
         box.addEventListener('wheel', e => {
           e.preventDefault();
@@ -3001,6 +3216,8 @@
           pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
           start = { x: e.clientX, y: e.clientY };
           moved = false; lastDist = 0;
+          const m = svg.getScreenCTM();
+          cachedScale = m ? m.a : 1;
         });
 
         box.addEventListener('pointermove', e => {
@@ -3019,12 +3236,10 @@
           }
           if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 5) return; // ambang agar klik simpul tetap berfungsi
           if (!moved) { moved = true; try { box.setPointerCapture(e.pointerId); } catch (_) {} }
-          const m = svg.getScreenCTM();
-          const s = m ? m.a : 1;
           const v = appState.pz[name];
-          v.x += (e.clientX - prev.x) / s;
-          v.y += (e.clientY - prev.y) / s;
-          pzApply(box, name);
+          v.x += (e.clientX - prev.x) / cachedScale;
+          v.y += (e.clientY - prev.y) / cachedScale;
+          scheduleApply();
         });
 
         const end = e => { pts.delete(e.pointerId); if (pts.size < 2) lastDist = 0; };
@@ -3032,6 +3247,230 @@
         box.addEventListener('pointercancel', end);
         box.addEventListener('pointerleave', e => { if (!box.hasPointerCapture || !box.hasPointerCapture(e.pointerId)) end(e); });
       });
+    }
+
+    // -----------------------------------------------------------------------
+    // PETA NYATA (1 sumber: CARTO Voyager berbasis OpenStreetMap) dengan
+    // renderer Canvas agar ringan/tanpa lag dan highlight jalur yang kontras.
+    // -----------------------------------------------------------------------
+    const leaf = { map: null, el: null, renderer: null, layer: null, legend: null, legendEl: null, lastRouteBounds: null };
+
+    function leafFit() {
+      if (!leaf.map || !appState.nodes.length) return;
+      leaf.map.fitBounds(appState.nodes.map(n => [n.lat, n.lon]), { padding: [36, 36] });
+    }
+
+    function leafFocusRoute() {
+      if (!leaf.map || !leaf.lastRouteBounds || leaf.lastRouteBounds.length < 2) {
+        leafFit();
+        return;
+      }
+      leaf.map.fitBounds(leaf.lastRouteBounds, { padding: [48, 48], maxZoom: 15 });
+    }
+
+    function leafEnsure(slot) {
+      let needsResize = false;
+      if (!leaf.map) {
+        leaf.el = document.createElement('div');
+        leaf.el.style.cssText = 'width:100%;height:100%;';
+        slot.appendChild(leaf.el);
+        leaf.renderer = L.canvas({ padding: 0.35 });
+        leaf.map = L.map(leaf.el, {
+          preferCanvas: true,
+          renderer: leaf.renderer,
+          zoomControl: true,
+          attributionControl: true,
+          zoomSnap: 1,
+          wheelDebounceTime: 80,
+          wheelPxPerZoomLevel: 90
+        });
+        // 1 sumber peta tunggal (CARTO Voyager, tile 256px standar agar ringan & cepat)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+          subdomains: 'abcd',
+          maxZoom: 19,
+          detectRetina: false,
+          updateWhenZooming: false,
+          updateWhenIdle: true,
+          keepBuffer: 2,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }).addTo(leaf.map);
+        leaf.layer = L.layerGroup().addTo(leaf.map);
+        leaf.legend = L.control({ position: 'bottomleft' });
+        leaf.legend.onAdd = () => {
+          leaf.legendEl = L.DomUtil.create('div', 'lf-legend');
+          L.DomEvent.disableClickPropagation(leaf.legendEl);
+          return leaf.legendEl;
+        };
+        leaf.legend.addTo(leaf.map);
+        leafFit();
+        needsResize = true;
+      } else if (leaf.el.parentNode !== slot) {
+        slot.appendChild(leaf.el);
+        needsResize = true;
+      }
+      if (needsResize) {
+        requestAnimationFrame(() => {
+          if (leaf.map && leaf.el && leaf.el.isConnected) {
+            leaf.map.invalidateSize({ pan: false });
+          }
+        });
+      }
+    }
+
+    function addLeafletChevron(uNode, vNode, color) {
+      const cosLat = Math.cos(((uNode.lat + vNode.lat) * 0.5) * Math.PI / 180);
+      const dLat = vNode.lat - uNode.lat;
+      const dLon = (vNode.lon - uNode.lon) * cosLat;
+      const segLen = Math.hypot(dLat, dLon);
+      if (segLen < 0.002) return;
+      const ux = dLon / segLen;
+      const uy = dLat / segLen;
+      const px = -uy;
+      const py = ux;
+      const size = Math.min(0.0017, segLen * 0.22);
+      const midLat = (uNode.lat + vNode.lat) * 0.5;
+      const midLon = (uNode.lon + vNode.lon) * 0.5;
+      const tip = [midLat + uy * size * 0.7, midLon + (ux * size * 0.7) / cosLat];
+      const left = [midLat - uy * size * 0.6 + py * size * 0.75, midLon - (ux * size * 0.6 - px * size * 0.75) / cosLat];
+      const right = [midLat - uy * size * 0.6 - py * size * 0.75, midLon - (ux * size * 0.6 + px * size * 0.75) / cosLat];
+      L.polyline([left, tip, right], {
+        renderer: leaf.renderer,
+        color,
+        weight: 2.6,
+        opacity: 0.98,
+        lineCap: 'round',
+        lineJoin: 'round',
+        interactive: false
+      }).addTo(leaf.layer);
+    }
+
+    function syncLeafletMap() {
+      const slot = document.querySelector('[data-leaflet-slot]');
+      if (!slot || !window.L || !appState._mapCtx) return;
+      leafEnsure(slot);
+      const { activeResult, altRoutes } = appState._mapCtx;
+      const ll = id => { const n = getNodeById(id); return [n.lat, n.lon]; };
+      const keyOf = (u, v) => (u < v ? `${u}-${v}` : `${v}-${u}`);
+
+      const previewMetrics = appState.previewAltRoutePath ? calculatePathMetrics(appState.previewAltRoutePath) : null;
+      const primaryPath = appState.previewAltRoutePath || activeResult.path || [];
+      const primaryPathEdges = getOrderedPathEdges(primaryPath);
+      const primarySig = primaryPath.join('-');
+      const primarySet = new Set(primaryPathEdges.map(([u, v]) => keyOf(u, v)));
+      const pathNodeSet = new Set(primaryPath);
+      const isMstAlgo = !appState.previewAltRoutePath && (activeResult.algoId === 'prim' || activeResult.algoId === 'kruskal');
+      const mstSet = isMstAlgo
+        ? new Set(activeResult.highlightedEdges.map(([u, v]) => keyOf(u, v)))
+        : new Set();
+
+      const palette = ['#f59e0b', '#16a34a'];
+      const secondary = altRoutes.filter(r => r.path.join('-') !== primarySig).slice(0, 2);
+      const secSets = secondary.map(r => new Set(r.highlightedEdges.map(([u, v]) => keyOf(u, v))));
+
+      leaf.layer.clearLayers();
+      const edgeMap = getEdgeMap();
+      const drawEdge = (coords, opts, tooltipText) => {
+        const line = L.polyline(coords, { renderer: leaf.renderer, lineCap: 'round', lineJoin: 'round', ...opts });
+        if (tooltipText) line.bindTooltip(tooltipText, { sticky: true });
+        line.addTo(leaf.layer);
+        return line;
+      };
+      const edgeTooltip = e => `<b>${e.from}–${e.to}</b> ${e.road || ''}<br>${formatDecimal(e.distance)} km • ${e.time} mnt • Rp${e.cost.toLocaleString('id-ID')}`;
+
+      // 1. Sisi graf non-rute (tipis & redup agar tidak mengganggu jalur utama)
+      appState.edges.forEach(e => {
+        const k = keyOf(e.from, e.to);
+        if (!primarySet.has(k) && !mstSet.has(k) && !secSets.some(s => s.has(k))) {
+          drawEdge([ll(e.from), ll(e.to)], { color: '#94a3b8', weight: 2.5, opacity: 0.45 }, edgeTooltip(e));
+        }
+      });
+
+      // 2. Top 2 rute alternatif (garis putus-putus halus)
+      appState.edges.forEach(e => {
+        const k = keyOf(e.from, e.to);
+        const idx = secSets.findIndex(s => s.has(k));
+        if (!primarySet.has(k) && !mstSet.has(k) && idx !== -1) {
+          drawEdge([ll(e.from), ll(e.to)], { color: palette[idx], weight: 3.5, opacity: 0.6, dashArray: '6 6' }, edgeTooltip(e));
+        }
+      });
+
+      // 3. Sisi MST (khusus Prim / Kruskal) di luar jalur utama Start -> Goal
+      if (isMstAlgo) {
+        appState.edges.forEach(e => {
+          const k = keyOf(e.from, e.to);
+          if (mstSet.has(k) && !primarySet.has(k)) {
+            drawEdge([ll(e.from), ll(e.to)], { color: '#10b981', weight: 4.5, opacity: 0.8 }, edgeTooltip(e));
+          }
+        });
+      }
+
+      // 4. Jalur Utama Aktif: Halo biru + Casing putih tebal + Garis inti solid + Panah arah
+      primaryPathEdges.forEach(([uId, vId]) => {
+        const uNode = getNodeById(uId);
+        const vNode = getNodeById(vId);
+        const coords = [[uNode.lat, uNode.lon], [vNode.lat, vNode.lon]];
+        const e = edgeMap.get(keyOf(uId, vId));
+        const tip = e ? `<b>Jalur Aktif ${uId} → ${vId}</b> (${e.road || ''})<br>${formatDecimal(e.distance)} km • ${e.time} mnt • Rp${e.cost.toLocaleString('id-ID')}` : '';
+
+        drawEdge(coords, { color: '#3b82f6', weight: 15, opacity: 0.24, interactive: false });
+        drawEdge(coords, { color: '#ffffff', weight: 9.5, opacity: 0.98, interactive: false });
+        drawEdge(coords, { color: '#2563eb', weight: 5.5, opacity: 1 }, tip);
+        addLeafletChevron(uNode, vNode, '#ffffff');
+      });
+
+      // 5. Simpul (Start, Goal, Simpul pada Rute, dan Simpul Lainnya)
+      appState.nodes.forEach(n => {
+        const isStart = n.id === appState.startNode;
+        const isGoal = n.id === appState.goalNode;
+        const isOnPath = pathNodeSet.has(n.id);
+
+        if (isStart || isGoal) {
+          L.circleMarker([n.lat, n.lon], {
+            renderer: leaf.renderer,
+            radius: 15.5,
+            weight: 2,
+            color: isStart ? '#2563eb' : '#dc2626',
+            fillColor: isStart ? '#2563eb' : '#dc2626',
+            fillOpacity: 0.2,
+            interactive: false
+          }).addTo(leaf.layer);
+        }
+
+        const m = L.circleMarker([n.lat, n.lon], {
+          renderer: leaf.renderer,
+          radius: isStart || isGoal ? 10.5 : isOnPath ? 8 : 5.5,
+          weight: isStart || isGoal ? 3 : isOnPath ? 2.8 : 2,
+          color: isStart || isGoal ? '#ffffff' : isOnPath ? '#1d4ed8' : '#64748b',
+          fillColor: isStart ? '#2563eb' : isGoal ? '#dc2626' : isOnPath ? '#dbeafe' : '#f8fafc',
+          fillOpacity: 1
+        });
+
+        const tag = isStart ? '▶ ' : isGoal ? '⚑ ' : isOnPath ? `${n.id} · ` : '';
+        const lblCls = isStart ? 'lf-lbl lf-lbl-start' : isGoal ? 'lf-lbl lf-lbl-goal' : isOnPath ? 'lf-lbl lf-lbl-path' : 'lf-lbl lf-lbl-dim';
+        m.bindTooltip(`${tag}${n.shortName}`, {
+          permanent: true,
+          direction: n.side === 'l' ? 'left' : 'right',
+          offset: [n.side === 'l' ? -9 : 9, 0],
+          className: lblCls
+        });
+        m.on('click', () => handleGraphNodeClick(n.id));
+        m.addTo(leaf.layer);
+      });
+
+      leaf.lastRouteBounds = primaryPath.length > 1 ? primaryPath.map(ll) : null;
+
+      const pm = previewMetrics || activeResult.metrics;
+      let html = primaryPath.length > 1
+        ? `<div><span style="display:inline-block;width:14px;height:4px;background:#2563eb;border:1px solid #fff;box-shadow:0 0 0 1px #2563eb;vertical-align:middle;border-radius:2px;margin-right:4px"></span><b>${appState.previewAltRoutePath ? 'Rute pilihan' : 'Rute utama (' + activeResult.meta.code + ')'}</b><br>${primaryPath.join(' → ')}<br>${formatDecimal(pm.distance)} km • ${pm.time} mnt</div>`
+        : '<div><b>Belum ada rute</b></div>';
+      if (isMstAlgo) {
+        html += `<div style="margin-top:3px"><span style="display:inline-block;width:12px;height:3px;background:#10b981;vertical-align:middle;margin-right:4px"></span>Cabang MST lainnya</div>`;
+      }
+      secondary.forEach((r, i) => {
+        html += `<div style="margin-top:3px"><span style="color:${palette[i]}">┈</span> Alt #${r.rank}: ${formatDecimal(r.metrics.distance)} km • ${r.metrics.time} mnt</div>`;
+      });
+      html += `<div class="lf-btn-row"><button type="button" onclick="leafFocusRoute()">Fokus ke rute</button><button type="button" onclick="leafFit()">Pusatkan peta</button></div>`;
+      leaf.legendEl.innerHTML = html;
     }
 
     function renderApp() {
@@ -3075,6 +3514,7 @@
         }
       }
       initPanZoom();
+      try { syncLeafletMap(); } catch (err) { console.error('Leaflet error:', err); }
     }
 
     // Initialize application safely on load
@@ -3083,6 +3523,29 @@
       if (mobileBtn) {
         mobileBtn.addEventListener('click', () => toggleMobileSidebar());
       }
+      document.addEventListener('click', (e) => {
+        if (appState.algoDropdownOpen && !e.target.closest('[data-algo-dropdown]')) {
+          closeAlgoDropdown();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (!appState.algoDropdownOpen) return;
+        if (e.key === 'Escape') {
+          closeAlgoDropdown();
+          const trig = document.getElementById('algo-dropdown-trigger');
+          if (trig) trig.focus();
+        } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+          const dd = document.querySelector('[data-algo-dropdown] [role="listbox"]');
+          if (!dd || !e.target.closest('[data-algo-dropdown]')) return;
+          const items = [...dd.querySelectorAll('[role="option"]')];
+          if (!items.length) return;
+          e.preventDefault();
+          const idx = items.indexOf(document.activeElement);
+          const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+            : (idx < 0 ? 0 : (idx + (e.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length);
+          items[next].focus();
+        }
+      });
       renderApp();
     }
 
